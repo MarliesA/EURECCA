@@ -203,9 +203,9 @@ class Vector(object):
                   # only read the block that we requested
                   if ((i>skipRowsSen) & (i<= (skipRowsSen + nSamples))):
                       x = [float(ix) for ix in line.split() if len(ix)>0]
-                      heading.append(x[9])
-                      pitch.append(x[10])
-                      roll.append(x[11])
+                      heading.append(x[11])
+                      pitch.append(x[12])
+                      roll.append(x[13])
                   elif i> (skipRowsSen + nSamples):
                       break 
                   
