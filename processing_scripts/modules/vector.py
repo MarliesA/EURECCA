@@ -9,54 +9,46 @@ import os
 import numpy as np
 import pandas as pd
 import xarray as xr
+import KNMI_readers as readers
+import pdb
 
 class Vector(object):
     
-    def __init__(self,name, dataFolder,zb,zi,tstart='',tstop='',
-                 blockWidth=600,
-                 fmin = 0.01,
-                 fmax = 1.5,
-                 fresolution = 0.01,
-                 fcorrmin = 0.05,
-                 fcorrmax = 1.0,
-                 maxiter = 100,
-                 rho=1000,
-                 g= 9.8):
+    def __init__(self,name, dataFolder,rho=1000,g=9.8,tstart=None,tstop=None,
+                 ):
         
         self.name = name
         self.dataFolder = dataFolder
-        self.zb = zb
-        self.zi = zi
-        self.blockWidth = blockWidth
-        self.fmin = fmin
-        self.fmax = fmax
-        self.fresolution = fresolution
-        self.fcorrmin = fcorrmin
-        self.fcorrmax = fcorrmax
-        self.maxiter = maxiter
-        self.rho = rho
         self.g = g
-
+        self.rho = rho
         
         self.get_fileNames()
         self.read_hdr()
         
         # if no tstart and tstop are specified, use the interval from the 
         # header file
-        if tstart == '':
-            tstart = self.startTime
+    
+        if tstart == None:
+            self.tstart = self.startTime
         else:
             tstart = pd.to_datetime(tstart)
-        if tstop == '':
-            tstop = self.stopTime
+            if tstart>self.startTime:
+                self.tstart = tstart
+            else:
+                self.tstart = self.startTime
+                
+        if tstop == None:
+            self.tstop = self.stopTime
         else:
             tstop = pd.to_datetime(tstop)
-        self.tstart = tstart
-        self.tstop = tstop
+            if tstop<self.stopTime:
+                self.tstop = tstop
+            else:
+                self.tstop = self.stopTime
+
         
-        self.load_block()
-        self.load_air_pressure_from_knmi()
-        self.correct_raw_pressure_for_air_pressure(self.dfpuv, self.pAir)
+        if self.tstop<self.tstart:
+            self.tstop = self.tstart
        
     def get_fileNames(self):
         '''
@@ -70,16 +62,28 @@ class Vector(object):
         self.hdrFile =self.dataFolder + '\\' + fileName[0]
         
         fileName = glob.glob('*.dat')
-        self.datFile = self.dataFolder + '\\' + fileName[0]
-         
+        if len(fileName)>1:
+            self.oneFilePerBurst = 1
+            datFiles = [self.dataFolder + '\\' + ifileName for ifileName in fileName]
+            
+            #make sure the files are in the right order, even if the ordering
+            #of the string interpretation is not correct because the number of 
+            #digits used in the filename is not correct:
+            fileOrder = [int(file.split('_')[-1][:-4]) for file in datFiles]
+            self.datFiles = [x for _, x in sorted(zip(fileOrder, datFiles))]
+        else:
+            self.datFile = self.dataFolder + '\\' + fileName[0]
+            self.oneFilePerBurst = 0
+            
         fileName = glob.glob('*.sen')
         self.senFile = self.dataFolder + '\\' + fileName[0]
          
         fileName = glob.glob('*.pck')
         self.pckFile = self.dataFolder + '\\' +fileName[0]
-        
-        fileName = glob.glob('KNMI*.txt')
-        self.knmiFileName =self.dataFolder + '\\' + fileName[0]
+
+        fileName = glob.glob('*.vhd')
+        self.vhdFile = self.dataFolder + '\\' +fileName[0]
+                
         
         os.chdir(cdir)
 
@@ -109,6 +113,11 @@ class Vector(object):
              
         self.hdr = myvars
         self.nMeas = float(myvars['Number of measurements'])
+        
+        #enforce that hours minutes seconds are part of the datetimestring
+        if len(myvars['Time of first measurement'])<=18:
+            myvars['Time of first measurement'] += ' 00:00:00'
+            
         try:
             self.startTime = pd.to_datetime(myvars['Time of first measurement'], 
                                             format = '%d-%m-%Y %H:%M:%S') 
@@ -124,9 +133,16 @@ class Vector(object):
             
         self.frequency = float(myvars['Sampling rate'].split()[0])
         self.coordinateSystem = myvars['Coordinate system']
-        self.transformationMatrix = myvars['Transformation matrix']   
-               
-    def load_block(self):
+        self.transformationMatrix = myvars['Transformation matrix'] 
+        if myvars['Burst interval']=='CONTINUOUS':
+            self.burstMode = False
+        else:
+            self.burstMode = True
+            self.burstInterval = int(myvars['Burst interval'][:-3]) #in seconds
+            self.samplesPerBurst = int(myvars['Samples per burst'])
+          
+        
+    def read_raw_data(self):
         '''
         read pressure, velocity components and correlation values from .dat
         read heading pitch and roll from .sen. Puts both in the same dataframe 
@@ -148,36 +164,110 @@ class Vector(object):
         # widthsSen = [(0,2),(2,5),(5,10),(10,13),(13,16),(16,19),(19,28),
         #              (28,37),(37,43),(43,50),(50,56),(56,62),(62,68),(68,75),
         #              (75,81),(81,84)]
+
+        if self.tstop<=self.tstart:
+            return
         
-        nSamples = (self.tstop-self.tstart).total_seconds()*self.frequency
+        if self.oneFilePerBurst: # a separate file for every burst
 
-        #----------------------------------------------------------------------
-        # on DAT file a new line for every measurement
-        #----------------------------------------------------------------------
+            nBursts = int(np.floor((self.tstop-self.tstart).total_seconds()/self.burstInterval))
+            nSamples = nBursts*self.samplesPerBurst
+            
+            skipBursts = np.floor((self.tstart - self.startTime).total_seconds()/self.burstInterval) 
+            
+            self.burstStartTimes = pd.date_range(start = self.tstart,periods = nBursts,
+                                               freq = '{}S'.format(self.burstInterval))
+            burstLocalTime = np.cumsum([1/self.frequency]*self.samplesPerBurst) - 1/self.frequency
+            
+            dt = pd.to_timedelta(burstLocalTime, unit='s')
+            
+            timeDat = []
+            for ib in np.arange(0,nBursts):
+                timeDat += list( self.burstStartTimes[ib] + dt  )
+                
+            # on DAT file a new line for every measurement
+            burst = [];u=[];v=[];w=[];cor1=[];cor2=[];cor3=[];p=[]; a1=[]; a2=[]; a3=[]; 
+            snr1=[];snr2=[];snr3=[];anl1=[];anl2=[];
+                       
+            for ifile,file in enumerate(self.datFiles):
+                # if (ifile>skipBursts) & (ifile <=skipBursts + nBursts) : 
+                if (ifile>=skipBursts) & (ifile < skipBursts + nBursts) : 
+                    with open(file) as fp:
+                        for line in fp:
+                            x = [float(ix) for ix in line.split() if len(ix)>0]
+                            burst.append(x[0])
+                            u.append(x[2])
+                            v.append(x[3])
+                            w.append(x[4])
+                            a1.append(x[5])
+                            a2.append(x[6])
+                            a3.append(x[7])
+                            snr1.append(x[8])
+                            snr2.append(x[9])
+                            snr3.append(x[10])
+                            cor1.append(x[11])
+                            cor2.append(x[12])
+                            cor3.append(x[13])
+                            p.append(x[14])
+                            anl1.append(x[15])
+                            anl2.append(x[16])                
+            
+        else: #all data in one long datfile
+            if self.burstMode: #measurements in burstmode
+                nBursts = int(np.floor((self.tstop-self.tstart).total_seconds()/self.burstInterval))
+                nSamples = nBursts*self.samplesPerBurst
+                
+                self.burstStartTimes = pd.date_range(start = self.tstart,periods = nBursts,
+                                                freq = '{}S'.format(self.burstInterval))
+                burstLocalTime = np.cumsum([1/self.frequency]*self.samplesPerBurst) -1/self.frequency
+                
+                dt = pd.to_timedelta(burstLocalTime, unit='s')
+                timeDat = []
+                for ib in np.arange(0,nBursts):
+                    timeDat+=list(self.burstStartTimes[ib] + dt)
 
-        timeDat = pd.date_range(start =self.tstart, periods = nSamples,
-                                freq = '{}S'.format(1/self.frequency))       
-        skipRowsDat = (self.tstart - self.startTime).total_seconds()*self.frequency   
-        # print('number of rows to skip = {}'.format(int(skipRowsDat)))         
-
-        u=[];v=[];w=[];cor1=[];cor2=[];cor3=[];p=[];
-        with open(self.datFile) as fp:
-            for i,line in enumerate(fp):
-                # only read the block that we requested
-                if ((i>skipRowsDat) & (i<= (skipRowsDat + nSamples))):
-                    x = [float(ix) for ix in line.split() if len(ix)>0]
-                    u.append(x[2])
-                    v.append(x[3])
-                    w.append(x[4])
-                    cor1.append(x[11])
-                    cor2.append(x[12])
-                    cor3.append(x[13])
-                    p.append(x[14])
-                elif i> (skipRowsDat + nSamples):
-                    break
-        # print('len(x) = {}'.format(len(timeDat)))
-        # print('len(u) = {}'.format(len(u)) )
-        
+                    
+                skipRowsDat = np.floor((self.tstart - self.startTime).total_seconds()/self.burstInterval)*self.samplesPerBurst     
+            
+            else: #continuous measurements
+                nSamples = (self.tstop-self.tstart).total_seconds()*self.frequency
+                timeDat = pd.date_range(start =self.tstart, periods = nSamples,
+                                        freq = '{}S'.format(1/self.frequency))       
+                skipRowsDat = (self.tstart - self.startTime).total_seconds()*self.frequency   
+            
+            # print('number of rows to skip = {}'.format(int(skipRowsDat)))         
+    
+            #----------------------------------------------------------------------
+            # on DAT file a new line for every measurement
+            #----------------------------------------------------------------------
+            burst = [];u=[];v=[];w=[];cor1=[];cor2=[];cor3=[];p=[]; a1=[]; a2=[]; a3=[]; 
+            snr1=[];snr2=[];snr3=[];anl1=[];anl2=[];
+            
+            
+            with open(self.datFile) as fp:
+                for i,line in enumerate(fp):
+                    # only read the block that we requested
+                    if ((i>skipRowsDat) & (i<= (skipRowsDat + nSamples))):
+                        x = [float(ix) for ix in line.split() if len(ix)>0]
+                        burst.append(x[0])
+                        u.append(x[2])
+                        v.append(x[3])
+                        w.append(x[4])
+                        a1.append(x[5])
+                        a2.append(x[6])
+                        a3.append(x[7])
+                        snr1.append(x[8])
+                        snr2.append(x[9])
+                        snr3.append(x[10])
+                        cor1.append(x[11])
+                        cor2.append(x[12])
+                        cor3.append(x[13])
+                        p.append(x[14])
+                        anl1.append(x[15])
+                        anl2.append(x[16])
+                    elif i> (skipRowsDat + nSamples):
+                        break
+                
         p = [1e4*ip for ip in p] # change dBar to Pascal
         
         if (len(timeDat)!=len(u)):
@@ -185,7 +275,12 @@ class Vector(object):
             
         dat={'t':timeDat,'u':u,'v':v,'w':w,
                   'p':p,
+                  'anl1':anl1,'anl2':anl2,
+                  'a1':a1,'a2':a2,'a3':a3,
+                  'snr1':snr1,'snr2':snr2,'snr3':snr3,
                   'cor1':cor1, 'cor2':cor2, 'cor3':cor3}
+        if self.burstMode:
+            dat['burst'] = burst
         print('.dat file was read')
         
         #----------------------------------------------------------------------   
@@ -197,15 +292,17 @@ class Vector(object):
         # print('number of rows to skip = {}'.format(int(skipRowsSen)))
 
         
-        heading = []; pitch = []; roll= [];
+        heading = []; pitch = []; roll= []; voltage = []; temp = []
         with open(self.senFile) as fp:
               for i,line in enumerate(fp):
                   # only read the block that we requested
                   if ((i>skipRowsSen) & (i<= (skipRowsSen + nSamples))):
                       x = [float(ix) for ix in line.split() if len(ix)>0]
-                      heading.append(x[11])
-                      pitch.append(x[12])
-                      roll.append(x[13])
+                      voltage.append(x[8])
+                      heading.append(x[10])
+                      pitch.append(x[11])
+                      roll.append(x[12])
+                      temp.append(x[13])
                   elif i> (skipRowsSen + nSamples):
                       break 
                   
@@ -213,11 +310,10 @@ class Vector(object):
             timeSen = timeSen[:len(heading)]            
         
         sen = {'t':timeSen, 'heading':heading,
-                    'pitch':pitch,'roll':roll}
+                    'pitch':pitch,'roll':roll,'voltage':voltage,'temperature':temp}
         print('.sen file was read')        
         
-        # from here cast everythin in dataframe if checks on length hold
-        
+        # from here cast everythin in dataframe if checks on length hold        
         df = pd.DataFrame(dat)
         df = df.set_index(['t'])
         
@@ -234,219 +330,201 @@ class Vector(object):
         #place to the last true value
         df3 = df3.fillna(method='ffill')
         self.dfpuv = df3
-        
+        # pdb.set_trace()
         return df  
       
-
-    def load_air_pressure_from_knmi(self,stationNumber = 235):
+    def read_vhd(self):
         '''
-        casts air pressure data from knmi in their download format to a pandas
-        Dataframe
+        RETURNS: dataframe of bottom pings at start of burst (d1) and end of 
+        burst (d2) in mm, indexed by the burst start time
         '''
-        
-        df = load_air_pressure_from_knmi(self.knmiFileName,
-                                    stationNumber = stationNumber)
-        
-        self.pAir = df
+    #  1   Month                            (1-12)
+    #  2   Day                              (1-31)
+    #  3   Year
+    #  4   Hour                             (0-23)
+    #  5   Minute                           (0-59)
+    #  6   Second                           (0-59)
+    #  7   Burst counter
+    #  8   No of velocity samples
+    #  9   Noise amplitude (Beam1)          (counts)
+    # 10   Noise amplitude (Beam2)          (counts)
+    # 11   Noise amplitude (Beam3)          (counts)
+    # 12   Noise correlation (Beam1)        (%)
+    # 13   Noise correlation (Beam2)        (%)
+    # 14   Noise correlation (Beam3)        (%)
+    # 15   Dist from probe - start (Beam1)  (counts)
+    # 16   Dist from probe - start (Beam2)  (counts)
+    # 17   Dist from probe - start (Beam3)  (counts)
+    # 18   Dist from probe - start (Avg)    (mm)
+    # 19   Dist from s.vol - start (Avg)    (mm)
+    # 20   Dist from probe - end (Beam1)    (counts)
+    # 21   Dist from probe - end (Beam2)    (counts)
+    # 22   Dist from probe - end (Beam3)    (counts)
+    # 23   Dist from probe - end (Avg)      (mm)
+    # 24   Dist from s.vol - end (Avg)      (mm)   
+    
+        tlist = []; dist1 = []; dist2 = []     
+        with open(self.vhdFile) as file: 
+            for line in file:
+                parts = line.split()
+                tlist.append(parts[0:6])
+                # burst = parts[7]
+                # noise = [int(x) for x in parts[8:11]]
+                # noiseCor = [int(x) for x in parts[11:14]]
+                dist1.append(float(parts[18])) #mm
+                dist2.append(float(parts[-1])) #mm
+        tList = [pd.to_datetime(''.join([x for _, x in sorted(zip([1,2,0,3,4,5], t))])) for t in tlist]
+        df = pd.DataFrame({'t':tList,'d1':dist1,'d2':dist2})
+        self.dfvhd = df.set_index('t')
 
-    def correct_raw_pressure_for_air_pressure(self,dfp,pAir,emergedT0=False):
-        '''
-        Uses air pressure from the pandas dataframe pAir to correct the raw 
-        pressure timeseries. In case the instrument was emerged from the water 
-        and hence measuring air pressure at the start and at the end of the deployment
-        we can also correct for a drift in the reference level of the instrument.
-        If the instrument was not emerged at start and end, we can only correct
-        for the drift in air pressure, but we can't correct for the drift in 
-        reference level of the instrument.
-        '''
-        
-        #resample air pressure df to same frequency as the pressure df
-        freq = (dfp.index[1]-dfp.index[0]).total_seconds()
-        pAir = pAir.resample('{}S'.format(freq)).asfreq().interpolate('linear')
-        
-        #join the two df's
-        dfp = dfp.join(pAir,rsuffix='Air') 
-        
-        # find first and last index where there is both solo signal and air pressure 
-        i0 = dfp.apply(pd.Series.first_valid_index)['pAir']
-        p0 = dfp.loc[i0:i0+pd.Timedelta('0.1H')] #average of first 6 minutes
-        i1 = dfp.apply(pd.Series.last_valid_index)['pAir']
-        p1 = dfp.loc[i1-pd.Timedelta('0.1H'):i1] #average of last 6 minutes
-        
-
-        #only correct for variations in air pressure while instrument is submerged
-        dfp['dpAir'] = dfp['pAir']-dfp['pAir'].loc[i0]
-        
-        #correct the pressure signal with dpAir and with drift in instrument pressure
-        dfp['pRaw'] = dfp['p']
-        
-        if emergedT0:
-            #compute drift in instrument measurement of air pressure through checking with knmi station
-            print('warning: pressure correction assumes that the instrument was out of the water for the first 10 min of measurement')
-            dfp['drift']=np.nan
-            dfp['drift'].loc[i0] = p0.p.mean()-p0.pAir.mean()
-            dfp['drift'].loc[i1] = p1.p.mean()-p1.pAir.mean()
-            dfp['drift'] = dfp['drift'].interpolate() - dfp['drift'].loc[i0]       
-        
-            dfp['p'] = dfp['pRaw']- dfp['pRaw'].loc[i0]-dfp['dpAir'] - dfp['drift']
-        else:
-            dfp['p'] = dfp['pRaw'] - dfp['dpAir']          
-        
-        self.dfpuv = dfp  
-
-        return dfp
-
-
-
-    def cast_to_blocks_in_xarray(self):
+        return self.dfvhd
+    
+    def cast_to_blocks_in_xarray(self,blockWidth=600):
         '''
         takes the raw data which are timeseries in pandas DataFrame and casts it
         in blocks (bursts) in an xarray with metadata for easy computations and 
         saving to file (netcdf) later on.
         '''
-
+        
         t = self.dfpuv.index.values
 
         p = self.dfpuv['p'].values
 
-        
         N = len(p)
         
-        blockLength = int(self.blockWidth * self.frequency)
+        if self.burstMode:
+            blockLength = int(self.samplesPerBurst)
+        else:                
+            blockLength = int(blockWidth * self.frequency)
+  
         NB = int(np.floor(N/blockLength))
+        
+        if NB==0:
+            print('there is no data between {} and {}'.format(self.tstart,self.tstop))
+            return
+        
         p = p[0:int(NB*blockLength)]
         N = len(p)
         p2 = p.reshape(NB,blockLength)
-
-        blockStartTimes = t[0::blockLength]
-        if len(blockStartTimes)>NB:
-            blockStartTimes = blockStartTimes[:-1]
+        
+        if self.burstMode:
+            blockStartTimes = self.burstStartTimes
+        else:
+            blockStartTimes = t[0::blockLength]
             
+        if len(blockStartTimes)>NB:
+            blockStartTimes = blockStartTimes[:NB]
+                
         #cast all info in dataset
+
         ds = xr.Dataset(
                 data_vars = dict(
-                    f = self.frequency,
-                    zb = self.zb,
-                    zi = self.zi,  
-                    rho = self.rho,
-                    g = self.g,
+                    sf = self.frequency,
                     p =(['t','N'],p2)
                     ),                  
                 coords = dict(t = blockStartTimes,
-                          N = np.arange(0,blockLength)
+                          N = np.arange(0,blockLength)/self.frequency
                 ))
           
         # also cast all other variables in the ds structure 
-        for var in ['u','v','w','cor1','cor2','cor3','heading','pitch','roll']:
+        for var in ['u','v','w','anl1','anl2','a1','a2','a3',
+                    'cor1','cor2','cor3',
+                    'snr1','snr2','snr3',
+                    'voltage',
+                    'heading','pitch','roll','burst']:
             tmp = self.dfpuv[var].values
             tmp = tmp[0:int(NB*blockLength)]
             ds[var] = (['t','N'],tmp.reshape(NB,int(N/NB)))
-        
-            
+           
         ds['t'].attrs = {'long_name': 'burst start times'}
-        ds['f'].attrs = {'units': 'Hz','long_name':'sampling frequency'} 
-        ds['zb'].attrs = {'units': 'm+NAP','long_name':'bed level, neg down'} 
-        ds['zi'].attrs = {'units': 'm+NAP','long_name':'instrument level, neg down'} 
-        ds['rho'].attrs = {'units': 'kg m-3','long_name':'water density'}
-        ds['g'].attrs = {'units': 'm s-2','long_name':'gravitational acceleration'}
-        ds['p'].attrs = {'units': 'Pascal','long_name':'pressure signal corrected for air pressure and  (possibly) instrument drift'} 
-        ds['u'].attrs = {'units': 'm/s','long_name':'velocity East component'}             
-        ds['v'].attrs = {'units': 'm/s','long_name':'velocity North component'}            
-        ds['w'].attrs = {'units': 'm/s','long_name':'velocity Up component'} 
-        ds['cor1'].attrs = {'units': '-','long_name':'correlation of beam 1'} 
-        ds['cor2'].attrs = {'units': '-','long_name':'correlation of beam 2'} 
-        ds['cor3'].attrs = {'units': '-','long_name':'correlation of beam 3'} 
+        ds['N'].attrs = {'units':'s','long_name':'time'}
+        ds['sf'].attrs = {'units': 'Hz','long_name':'sampling frequency'} 
+        ds['p'].attrs = {'units': 'Pascal','long_name':'pressure'} 
+        ds['u'].attrs = {'units': 'm/s','long_name':'velocity 1 component'}             
+        ds['v'].attrs = {'units': 'm/s','long_name':'velocity 2 component'}            
+        ds['w'].attrs = {'units': 'm/s','long_name':'velocity 3 component'} 
+        ds['anl1'].attrs= {'units':'-','long_name':'analog input 1'}
+        ds['anl2'].attrs= {'units':'-','long_name':'analog input 2'}        
+        ds['cor1'].attrs = {'units': '-','long_name':'correlation beam 1'} 
+        ds['cor2'].attrs = {'units': '-','long_name':'correlation beam 2'} 
+        ds['cor3'].attrs = {'units': '-','long_name':'correlation beam 3'}
+        ds['snr1'].attrs = {'units': 'dB','long_name':'signal to noise beam 1'} 
+        ds['snr2'].attrs = {'units': 'dB','long_name':'signal to noise beam 2'} 
+        ds['snr3'].attrs = {'units': 'dB','long_name':'signal to noise beam 3'} 
         ds['heading'].attrs = {'units': 'deg','long_name':'instrument heading'} 
         ds['pitch'].attrs = {'units': 'deg','long_name':'instrument pitch'} 
-        ds['roll'].attrs = {'units': 'deg','long_name':'instrument roll'}   
+        ds['roll'].attrs = {'units': 'deg','long_name':'instrument roll'}  
+        
+        # if not self.dfvhd is None:
+        #     ds[]
                           
-        self.ds = ds
-
-    def reference_pressure_to_water_level_observations(self,referenceDataPath):
-        '''
-        To be executed after pressure correction, before any attenuation 
-        functionality is called, in case we can not rely on the reference level of the 
-        pressure from the ADV itself. It then takes the reference pressure from the
-        alternative instrument provided
-        '''
-              
-        print('using zs measurements from other intrument to correct pressure')
-
-        
-        #determine time interval over which the water level observations need to be averaged
-        dfp = self.dfpuv
-        i0 = dfp.apply(pd.Series.first_valid_index)['p']
-        i1 = dfp.apply(pd.Series.last_valid_index)['p']
-        
-        #compute hydrostatic pressure corresponding to certain water level in Pa
-        inst = xr.open_dataset(referenceDataPath)
-        phyd = (inst.zsmean.loc[i0:i1]-self.zi)*self.rho * self.g #hydrostatic pressure in Pa
-        phyd = phyd.to_series()
-        phyd= phyd.resample('{}S'.format(1/self.frequency)).asfreq()
-        phyd = phyd.interpolate('linear')
-        
-        #correct the data in the DataFrame
-        dfp['pRaw'] = dfp['p']
-        dfp['p'] = dfp['p']-dfp['p'].mean() + phyd
-        
-        self.dfpuv = dfp
+        self.ds = ds       
         
     def compute_block_averages(self):   
          '''
          computes some first block averages, specifically average pressure, 
          water level and water depth on the xarray Dataset
          '''
-         pm = self.ds['p'].values.mean(axis=1)/self.rho/self.g  #in dBar!    
-         zsmean = pm + self.zi
-         h = pm + self.zi - self.zb   
+        
+         variables = ['p','u','v','w',
+                      'anl1','anl2',
+                      'cor1','cor2','cor3',
+                      'snr1','snr2','snr3',
+                      'heading','pitch','roll']
          
-         ds = self.ds
-         
-         ds['zsmean'] = (['t'],zsmean)
-         ds['h'] = (['t'], h)
-         ds['pm'] = (['t'],pm) 
-         
-         ds['pm'].attrs = {'units': 'dBar','long_name':'burst averaged pressure'} 
-         ds['zsmean'].attrs = {'units': 'm+NAP','long_name':'burst averaged surface elevation'} 
-         ds['h'].attrs = {'units': 'm','long_name':'burst averaged water depth'} 
-         
-         self.ds = ds
+         for var in variables:
+             varm = self.ds[var].values.mean(axis=1)           
+             self.ds[var + 'm'] = (['t'],varm)          
+             self.ds[var + 'm'].attrs = self.ds[var].attrs
+             
+    # def add_positioning_info(self,df):
+    #     """
+    #     add positioning data to the dataframe, with the same time spacing as 
+    #     the block starttimes.
+
+    #     Parameters
+    #     ----------
+    #     df : TYPE PANDAS DATAFRAME
+    #         with columns zi, zb and ori.
+
+    #     Returns
+    #     -------
+    #     None, but adds the information to the vectors Dataset in matching time
+    #     coordinates.
+
+    #     """
+    #     #cast in dataset
+    #     pos = xr.Dataset.from_dataframe(df)
+    #     pos = pos.rename({'index':'t'}) 
+        
+    #     #slice only the section that we have observations on
+    #     pos = pos.resample({'t':'1H'}).interpolate('nearest')               
+    #     pos = pos.sel(t=slice(self.ds.t.min(),self.ds.t.max()))
+
+    #     #bring to same time axis as observations       
+    #     pos = pos.resample({'t':'1800S'}).interpolate('nearest')
+    #     pos = pos.interpolate_na(dim = 't',method='nearest',fill_value="extrapolate")
+   
+    #     ds = self.ds.merge(pos)  
+
+    #     ds['zb'].attrs = {'units': 'm+NAP','long_name':'bed level, neg down'} 
+    #     ds['h'].attrs = {'units': 'cm','long_name':'instrument height above bed, neg down'} 
+    #     ds['io'].attrs= {'units':'deg','long_name':'angle x-dir with north clockwise'}
+        
+    #     self.ds = ds
+        
+        
+
+        
+      
+        
+        
+        
+
+
         
 
         
             
-def load_air_pressure_from_knmi(filePath,stationNumber = 235):
-    '''
-    reads the text file and casts data in a dataframe in the unit of Pascals
-    '''
-            
-    date=[]; h=[]; T=[]; pa=[];no = [];
-    with open(filePath) as fp:
-        for line in (fp):
-            if line[0]=='#':
-                continue
-            else:
-               x =line.split(',')
-               no.append(float(x[0]))
-               date.append(str(x[1]))
-               h.append(float(x[2]))
-               T.append(float(x[3]))
-               pa.append(float(x[4]))
-    pa = 10*np.array(pa) # change 0.1hPa to Pascal
-    t0 = pd.to_datetime(date[0],format='%Y%m%d')+pd.Timedelta('{}H'.format(h[0]))
-    t = pd.date_range(t0.to_datetime64(),periods=len(pa),freq='1H')
-    
-    if len(t)!=len(pa):
-        print('reconstruct time array line by line. This is much more work!')
-        t = [pd.to_datetime(ix,format='%Y%m%d')+pd.Timedelta('{}H'.format(ih)) for ix,ih in zip(date,h)]
-    
-    #prepare the air pressure array to similar frequency and linearly interpolate missing values    
-    pAir = pd.DataFrame(data={'stationNo':no,'p':pa,'T':T},index = t)
-    
-    #drop all other entries apart the station number that we chose
-    pAir = pAir[pAir['stationNo']==stationNumber] #make sure only the Kooij data is in there
-    pAir.drop(columns={'stationNo'},inplace=True)  
-    
-    return pAir
 
        
