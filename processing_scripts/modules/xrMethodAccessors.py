@@ -20,90 +20,130 @@ class WaveStatMethodAccessor:
     def __init__(self, xarray_obj):
         self._obj = xarray_obj
     
-    def fill_nans(self,var,maxFracNans = 0.04, maxGap = 16, **kwargs):
+    def fill_nans(self,var,maxFracNans=0.04, maxGap=16, **kwargs):
         ds = self._obj
 
-        maxNumNans = int(len(ds.N)  * maxFracNans )        
-        ds[var + 'w'] = ds[var].where(np.isnan(ds[var]).sum(dim='N') < maxNumNans )
-        ds[var + 'w'] = ds[var + 'w'].interpolate_na( dim = 'N',method = 'cubic', max_gap = maxGap )
+        maxNumNans = int(len(ds.N)*maxFracNans)
+        ds[var + 'w'] = ds[var].where(np.isnan(ds[var]).sum(dim='N') < maxNumNans)
+        ds[var + 'w'] = ds[var + 'w'].interpolate_na(dim='N', method='cubic', max_gap=maxGap)
         ds[var + 'w'] = ds[var + 'w'].ffill(dim='N').bfill(dim='N')        
-        ds[var + 'w'].attrs = {'units':ds[var].attrs['units'],'long_name':ds[var].attrs['units'],'comments':'interpolated per bursts'}
+        ds[var + 'w'].attrs = {'units': ds[var].attrs['units'], 'long_name': ds[var].attrs['units'], 'comments': 'interpolated per bursts'}
         return ds[var + 'w']
     
-    def disper(self,T='Tmm10',d='d'):
-        ds = self._obj.dropna(dim='t',subset=[T,d])
-        #return nans if there is no data remaining
-        if len(ds.t)==0:
-            return (('t'),np.nan*np.ones(len(self._obj.t)))  
-        k =  xr.apply_ufunc(
-            lambda tm01,d: puv.disper(2*np.pi/tm01,d),
-            ds[T],ds[d],
-            input_core_dims = [[],[]],
-            output_core_dims = [[]],
+    def disper(self, T='Tmm10', d='d'):
+        ds = self._obj.dropna(dim='t', subset=[T, d])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan*np.ones(len(self._obj.t)))
+
+        k = xr.apply_ufunc(
+            lambda tm01, d: puv.disper(2*np.pi/tm01, d),
+            ds[T], ds[d],
+            input_core_dims=[[], []],
+            output_core_dims=[[]],
             vectorize=True
             )
         k.name = 'k'
-        k.attrs = {'long_name':'k','units':'m-1'}
+        k.attrs = {'long_name': 'k', 'units': 'm-1'}
         return k
 
-    def disper_cur(self,T='Tmm10',d='d',u='ud_mean'):
-        ds = self._obj.dropna(dim='t',subset=[T,d,u])
-        
-        ufunc = lambda T,h,u: puv.disper_cur(2*np.pi/T,h,u)            
-        k =  xr.apply_ufunc(
+    def disper_cur(self, T='Tmm10', d='d', u='ud_mean'):
+        '''
+        current corrected wave number from dispersion relation
+        :param T: wave period
+        :param d: water depth
+        :param u: ambient velocity
+        :return: wave number k
+        '''
+        ds = self._obj.dropna(dim='t', subset=[T, d, u])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan*np.ones(len(self._obj.t)))
+
+        ufunc = lambda T, h, u: puv.disper_cur(2*np.pi/T, h, u)
+        k = xr.apply_ufunc(
             ufunc,
-            ds[T],ds[d],ds[u],
-            input_core_dims=[[],[],[]],
+            ds[T], ds[d], ds[u],
+            input_core_dims=[[], [], []],
             output_core_dims=[[]], 
             vectorize=True
             )
         k.name = 'k'
-        k.attrs = {'long_name':'k','units':'m-1','comments':'current corrected'}
+        k.attrs = {'long_name': 'k', 'units': 'm-1', 'comments': 'current corrected'}
         return k
     
-    def spectrum_simple(self,var, **kwargs):
+    def spectrum_simple(self, var, **kwargs):
         """compute spectrum simple"""
         #only apply on non-nan rows
-        ds = self._obj.dropna(dim='t',subset=[var])
+        ds = self._obj.dropna(dim='t', subset=[var])
+
         #return nans if there is no data remaining
-        if len(ds.t)==0:
-            return (('t','f'),np.nan*np.ones([len(ds.t),len(ds.f)]))  
+        if len(ds.t) == 0:
+            return (('t', 'f'), np.nan*np.ones([len(ds.t), len(ds.f)]))
         
-        ufunc = lambda x,: puv.spectrum_simple(ds.sf.values,x,**kwargs )              
+        ufunc = lambda x: puv.spectrum_simple(ds.sf.values, x, **kwargs )
         return xr.apply_ufunc(ufunc,
             ds[var],
             input_core_dims=[['N']],
             output_core_dims=[['f'],['f']], 
             vectorize=True)
 
-    def attenuate_signal(self,Type, var,zi  = 'zi', zb = 'zb' , d = 'd', **kwargs):
+    def attenuate_signal(self, Type, var,zi  = 'zi', zb = 'zb' , d = 'd', **kwargs):
+        '''
+        reconstructs the depth-attenuation corrected surface elevation from a pressure or velocity signal
+        :param Type: the signal type, one of ['pressure','horizontal','vertical']
+        :param var: signal's variable name
+        :param zi: instrument height
+        :param zb: bed level
+        :param d: water depth
+        :param kwargs:
+        :return: reconstructed depth-attenuation corrected surface elevation
+        '''
         ds = self._obj
+
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t', subset=[var])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t', 'N'), np.nan * np.ones([len(ds.t), len(ds.N)]))
+
         ufunc = lambda x,d,zi,zb: puv.attenuate_signal(
-            Type,ds.sf.values,x,d,zi,zb, **kwargs   
-            )
+                Type,ds.sf.values,x, d, zi, zb, **kwargs
+                )
         return xr.apply_ufunc(
             ufunc,
             ds[var], ds[d], ds[zi], ds[zb],
-            input_core_dims=[['N'],[],[],[]],
+            input_core_dims=[['N'], [], [], []],
             output_core_dims=[['N']], 
             vectorize=True
             )
 
     def attenuation_corrected_spectrum(
             self, Type, var,zi = 'zi', zb = 'zb', d = 'd', **kwargs):
-        ds = self._obj
+
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t', subset=[var])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t', 'f'), np.nan * np.ones([len(ds.t), len(ds.f)]))
+
         ufunc = lambda x,d,zi,zb: puv.attenuation_corrected_wave_spectrum(
-            Type,ds.sf.values, x, d, zi, zb, **kwargs
-            )
+                Type,ds.sf.values, x, d, zi, zb, **kwargs
+                )
         return xr.apply_ufunc(ufunc,
-            ds[var],ds[d],ds[zi],ds[zb],
-            input_core_dims=[['N'],[],[],[]],
-            output_core_dims=[['f'],['f']], 
+            ds[var], ds[d], ds[zi], ds[zb],
+            input_core_dims=[['N'], [],[], []],
+            output_core_dims=[['f'], ['f']],
             vectorize=True
             )
                               
-    def attenuation_factor(self,Type,elev = 'elev',d = 'd',**kwargs):
+    def attenuation_factor(self, Type, elev = 'elev',d = 'd',**kwargs):
         ds = self._obj
+
         ufunc = lambda elev, h: puv.attenuation_factor(
             Type, elev, h, ds.f.values,**kwargs)
         return xr.apply_ufunc(ufunc,
@@ -113,12 +153,19 @@ class WaveStatMethodAccessor:
             vectorize=True
             )
     
-    def get_fp(self,var,fpmin=0.01):
+    def get_peak_frequency(self,var,fpmin=0.01):
         ''' RETURNS peak frequency of spectra in var'''
-        ds = self._obj
-        fx,vy = ds.puv.spectrum_simple(var)
 
-        ufunc = lambda fx, vy: puv.get_fp(
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t', subset=[var])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan * np.ones([len(ds.t)]))
+
+        fx, vy = ds.puv.spectrum_simple(var)
+
+        ufunc = lambda fx, vy: puv.get_peak_frequency(
             fx = fx,
             vy = vy,
             fpmin=fpmin)  
@@ -130,14 +177,21 @@ class WaveStatMethodAccessor:
             vectorize=True)  
 
     def puv_wavedir(self,p='p',u='u',v='v',**kwargs):
+
+        # only apply on non-nan rows
         ds = self._obj.dropna(dim='t',subset=[p,u,v])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan * np.ones([len(ds.t)]))
+
         sf = ds.sf.values
         ufunc = lambda p,u,v: puv.puv_wavedir(
             sf, _p=p, _u=u, _v=v, **kwargs)
         
         return xr.apply_ufunc(ufunc,
-                              ds[p],ds[u],ds[v],
-                              input_core_dims=[['N'],['N'],['N']],
+                              ds[p], ds[u], ds[v],
+                              input_core_dims=[['N'], ['N'], ['N']],
                               output_core_dims=[[]],
                               vectorize=True)
     
@@ -146,10 +200,12 @@ class WaveStatMethodAccessor:
                    in case freqband is not specified, else uses specified
                    frequencyband 'freqband'.
         '''
-        ds = self._obj
-        
+        ds = self._obj.dropna(dim='t', subset=[var])
+        if len(ds.t) == 0:
+            return (('t'), np.nan*np.ones([len(ds.t)]))
+
         sf = ds.sf.values
-        #if by slicing or dropping data the sampling frequency became an array        
+        # if by slicing or dropping data the sampling frequency became an array
         if len(np.atleast_1d(sf))>1:
             sf = sf[0][0]
                         
@@ -187,42 +243,91 @@ class WaveStatMethodAccessor:
     
 
     def compute_wave_params(self,var='vy',**kwargs):
-        ds = self._obj
+
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t',subset=[var])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)])
+                    )
+
         ufunc = lambda vy: puv.compute_wave_params(
-            ds.f.values,vy,returntype = 'list',**kwargs)
+            ds.f.values, vy, returntype = 'list', **kwargs)
         return xr.apply_ufunc(ufunc,
             ds[var],
             input_core_dims=[['f']],
-            output_core_dims=[[],[],[],[],[]], 
+            output_core_dims=[[], [], [], [], [], []],
             vectorize=True
             )     
 
     def compute_wave_params_from_S(self,var='S',**kwargs):
-        ds = self._obj
+
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t',subset=[var])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)])
+                    )
+
         vy = ds[var].integrate(coord='theta')
         ufunc = lambda vy,S: puv.compute_wave_params(
             ds.f.values,vy,S, theta = ds.theta.values,returntype = 'list',**kwargs)
         return xr.apply_ufunc(ufunc,
-            vy,ds[var],
+            vy, ds[var],
             input_core_dims=[['f'],['f','theta']],
-            output_core_dims=[[],[],[],[],[],[],[]], 
+            output_core_dims=[[],[],[],[],[],[],[], []],
             vectorize=True
             )     
     
-    def compute_SVD_angle(self,u='u_ss',v = 'v_ss',fp = 'fp'):
-        ds = self._obj
-        ufunc = lambda u,v,fp: ((puv.compute_SVD_angle(
-            ds.sf.values,u,v,
-            fmin=0.5*fp,fmax=ds.sf.values/2))*180/np.pi)
-        ang =  xr.apply_ufunc(ufunc,
-                            ds[u],ds[v],ds[fp],
+    def compute_SVD_angle(self, u='u_ss', v='v_ss', fp='fp', freqband=None):
+
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t', subset=[u, v])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan * np.ones([len(ds.t)]))
+
+        if freqband is None:
+            ufunc = lambda u, v, fp: ((puv.compute_SVD_angle(
+                ds.sf.values, u, v,
+                fmin=0.5*fp, fmax=ds.sf.values/2))*180/np.pi)
+        else:
+            assert len(freqband) == 2, 'prescribe a frequency band through [fmin, fmax]'
+
+            ufunc = lambda u, v, fp: ((puv.compute_SVD_angle(
+                ds.sf.values, u, v,
+                fmin=freqband[0], fmax=freqband[1]))*180/np.pi)
+        ang = xr.apply_ufunc(ufunc,
+                            ds[u], ds[v], ds[fp],
                             input_core_dims=[['N'], ['N'], []],
                             vectorize=True) 
 
         return ang
 
-    def compute_spectral_width(self,var='vy'):
-        ds = self._obj
+    def compute_spectral_width(self, var='vy'):
+
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t',subset=[var])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan * np.ones([len(ds.t)])  )
+
         fx = ds.f.values
         ufunc = lambda vy: puv.compute_spectral_width(
             fx,vy)
@@ -233,26 +338,39 @@ class WaveStatMethodAccessor:
             vectorize=True
             ) 
     
-    def rotate_velocities(self,u='u_ss',v = 'v_ss',theta='svdtheta'):
-        ds = self._obj
+    def rotate_velocities(self, u, v, theta):
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t',subset=[u, v])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t', 'N'), np.nan * np.ones([len(ds.t), len(ds.N)]),
+                    ('t', 'N'), np.nan * np.ones([len(ds.t), len(ds.N)]) )
         
-        if type(theta)==type('str'):            
-            ufunc = lambda u,v,thet: puv.rotate_velocities(u,v,thet)
+        if type(theta) == type('str'):
+            ufunc = lambda u, v, thet: puv.rotate_velocities(u, v, thet)
             return xr.apply_ufunc(ufunc,
-                        ds[u],ds[v],ds[theta],
+                        ds[u], ds[v], ds[theta],
                         input_core_dims=[['N'], ['N'], []],
                         output_core_dims=[['N'],['N']], 
                         vectorize=True) 
         else:            
-            ufunc = lambda u,v: puv.rotate_velocities(u,v,theta)
+            ufunc = lambda u, v: puv.rotate_velocities(u, v, theta)
             return xr.apply_ufunc(ufunc,
-                        ds[u],ds[v],
+                        ds[u], ds[v],
                         input_core_dims=[['N'], ['N']],
-                        output_core_dims=[['N'],['N']], 
+                        output_core_dims=[['N'], ['N']],
                         vectorize=True)     
     
     def wave_MEMpuv(self,eta='etaw',u = 'uw', v='vw', d = 'd', zi = 'zi', zb= 'zb',**kwargs):
-        ds = self._obj
+
+        #only apply on non-nan rows
+        ds = self._obj.dropna(dim='t',subset=[eta, u, v])
+
+        #return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t', 'f', 'theta'), np.nan*np.ones([len(ds.t), len(ds.f), len(ds.theta)]))
+
         fresolution = ds.f.values[1] - ds.f.values[0]
         ufunc = lambda eta,u,v,d,zi,zb: puv.wave_MEMpuv(
                     eta,u,v,d,
@@ -262,34 +380,50 @@ class WaveStatMethodAccessor:
                     maxiter = 20,
                     **kwargs)
                    
-        fx,vy, theta, ds['S'] = xr.apply_ufunc(ufunc,
+        fx, vy, theta, S = xr.apply_ufunc(ufunc,
                                  ds[eta],
                                  ds[u],
                                  ds[v],
                                  ds[d], 
                                  ds[zi],
                                  ds[zb],
-                                 input_core_dims=[['N'],['N'],['N'],[], [],[]],
-                                 output_core_dims=[['f'],['f'],['theta'],['f','theta']],
+                                 input_core_dims=[['N'], ['N'], ['N'], [], [], []],
+                                 output_core_dims=[['f'], ['f'], ['theta'], ['f', 'theta']],
                                  vectorize=True) 
         
-        return ds['S']
+        return S
 
-    def compute_SkAs(self,var,fixedBounds = False, bounds = [0,8]):
-        ds = self._obj
+    def compute_SkAs(self, var, fixedBounds=False, bounds=[0, 8]):
+
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t', subset=[var])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)]),
+                    ('t'), np.nan * np.ones([len(ds.t)])
+                    )
+
         sf = ds.sf.values
-        ds['Tp'] = 1/ds.fp
+
         try:
             if fixedBounds:
-                ufunc = lambda x, T: puv.compute_SkAs(sf,x,fbounds=bounds)                            
+                ufunc = lambda x : puv.compute_SkAs(sf,x,fbounds=bounds)
+                Sk,As,sig = xr.apply_ufunc(ufunc,
+                                    ds[var].dropna(dim='t'),
+                                    input_core_dims=[['N']],
+                                    output_core_dims=[[], [], []],
+                                    vectorize=True)
             else:
-                ufunc = lambda x, T: puv.compute_SkAs(sf,x,fbounds=[0.5/T,sf/2])
-            Sk,As,sig = xr.apply_ufunc(ufunc,
-                                ds[var].dropna(dim='t'),
-                                ds.Tp.dropna(dim='t'),
-                                input_core_dims=[['N'], []],
-                                output_core_dims=[[], [], []], 
-                                vectorize=True) 
+                ds['Tp'] = 1 / ds.fp
+                ufunc = lambda x, T: puv.compute_SkAs(sf,x,fbounds=[0.5/T, sf/2])
+                Sk,As,sig = xr.apply_ufunc(ufunc,
+                                    ds[var].dropna(dim='t'),
+                                    ds.Tp.dropna(dim='t'),
+                                    input_core_dims=[['N'], []],
+                                    output_core_dims=[[], [], []],
+                                    vectorize=True)
         except:
             Sk = np.nan*ds.Tp
             As = np.nan*ds.Tp
@@ -297,17 +431,23 @@ class WaveStatMethodAccessor:
         return Sk, As, sig   
     
     def Ursell(self,Hm0='Hm0',k='k',d='d'):
-        
-        ds = self._obj
+
+        # only apply on non-nan rows
+        ds = self._obj.dropna(dim='t', subset=[Hm0, k, d])
+
+        # return nans if there is no data remaining
+        if len(ds.t) == 0:
+            return (('t'), np.nan * np.ones([len(ds.t)])  )
+
         Ur =  xr.apply_ufunc(
-            lambda hm0,k,d: 3/4 * 0.5 * hm0*k/(k*d)**3,
-            ds[Hm0],ds[k],ds[d],
-            input_core_dims=[[],[],[]],
-            output_core_dims = [[]],
-            vectorize = True
+            lambda hm0, k, d: 3/4 * 0.5 * hm0*k/(k*d)**3,
+            ds[Hm0], ds[k], ds[d],
+            input_core_dims=[[], [], []],
+            output_core_dims=[[]],
+            vectorize=True
             )
         Ur.name = 'Ur'
-        Ur.attrs = {'long_name':'Ur','units':'-'}
+        Ur.attrs = {'long_name': 'Ur', 'units': '-'}
         
         return Ur
     
@@ -388,15 +528,20 @@ class BurstStructureMethodAccessor:
         Example
         rs = reshape_burst_length(ds, 600, dims=('t','N'))
         
-        M. van der Lugt 12 December 2021    
+        M. van der Lugt 12 December 2021
+        M. van der Lugt 08 May 2023: treat burst averaged and parameter variables separately
         '''
         ds = self._obj
 
-        #identify variables that are burst averaged:
+        # identify variables that are burst averaged or parameters:
         bavars = [key for key in ds.keys() if (not 'N' in  ds[key].dims and 't' in ds[key].dims)]
-        
+        params = [key for key in ds.keys() if (not 'N' in ds[key].dims and (not 't' in ds[key].dims))]
 
-               
+        bavars_ds = ds[bavars]
+        params_ds = ds[params]
+        ds = ds.drop_vars(bavars)
+        ds = ds.drop_vars(params)
+
         #specify burst time axis in terms of timedeltas
         ds['dt'] = (('N'),pd.to_timedelta(ds.N.values,unit='S') )
         t2, dt2 = xr.broadcast(ds.t,ds.dt)
@@ -404,18 +549,18 @@ class BurstStructureMethodAccessor:
         ds['time'] = t2 + dt2 
            
         #stack the data to a long array for preparation of averaging
-        stack0 = ds.stack(z = ('t', 'N') )    
-        stack0 = stack0.assign_coords(z = stack0.time)
-        
+        stack0 = ds.stack(z = ('t', 'N') )
+        stack0 = stack0.drop_vars({'z', 'N', 't'}, errors='ignore')  # we ignore the error that some variables are not on the dataset
+        stack0 = stack0.assign_coords(z=stack0.time)
+
         #make sure the time axis is complete (and add nans where no data)
-        sf = ds.sf.values
+        sf = params_ds.sf.values
         stack = stack0.resample(
             z = '{}S'.format(1/sf)).nearest(
                 tolerance = '{}S'.format(1/sf)
                 )
-          
-                        
-        #prepare the multiindex:    
+
+        # prepare the multiindex:
         nSamples =len(stack.time)
         burstLength = int(burstDuration*sf)
         nBursts = int(np.floor( nSamples / burstLength ))
@@ -431,12 +576,88 @@ class BurstStructureMethodAccessor:
         stack['z'] = index
         reshaped = stack.unstack('z')
 
-        for var in bavars:
-            reshaped[var] = reshaped[var].mean(dim='N')
+        # interpolate burst-averaged variables back onto the dataset
+        if len(bavars_ds.t) > 1:
+            for var in bavars:
+                reshaped[var] = bavars_ds[var].interp_like(reshaped)
+        else:
+            # we can't interpolate if there is just one timestamp on the dataset. In that case just broadcast to all t's
+            for var in bavars:
+                reshaped[var] = bavars_ds[var]
 
-        return reshaped.drop(['dt','time'])   
-    
-    
+        # set back parameters onto the dataset
+        for var in params:
+            reshaped[var] = params_ds[var]
+
+        return reshaped.drop(['dt', 'time'])
+
+    def reduce_burst_length(self, reduce_factor):
+        '''
+        reshape_burst_length:
+            takes an Xarray dataset with a structure of burststarttimes and
+            burstsamples and reshapes the bursts to shorter bursts by a factor 'reduce_factor'.
+            Simply splits the duration up.
+
+        Syntax:
+        ds = reduce_burst_length(ds,reduce_factor)
+
+        Input:
+        ds            = xarray Dataset
+        reduce_factor = integer larger than 1
+
+        Output:
+        ds           = xarray Dataset with all original variables on shorter bursts
+
+
+        Example
+        rs = reshape_burst_length(ds, 3)
+
+        M. van der Lugt 05 June 2023
+
+        '''
+        ds = self._obj
+
+        # some parameters from the input dataset
+        sf = ds.sf.values
+        N0 = len(ds.N)
+        nt0 = len(ds.t)
+        N1 = int(N0 / reduce_factor)
+        # we add timestamps to the time axis based on the amount of blocks we reformat the structure in
+        tt = []
+        for i in range(reduce_factor):
+            tt.append(
+                ds.t.values + pd.Timedelta('{}s'.format(int(i * N1 / sf)))
+            )
+
+        t1 = np.array(tt).T.reshape(reduce_factor * nt0)
+        N1 = int(N0 / 3)
+
+        ds2 = xr.Dataset(
+            data_vars={},
+            coords={'t': t1,
+                    'N': list(range(N1))}
+        )
+
+        # differentiate between burst, timeseries and parameter variables
+        for var in ds.data_vars:
+            if 'N' in ds[var].dims:
+                # reshape the raster data
+                ds2[var] = (('t', 'N'), ds[var].values.reshape(len(t1), N1))
+            elif 't' in ds[var].dims:
+                # interpolate onto finer temporal dimension
+                if len(ds.t)>1:
+                    ds2[var] = ds[var].interp_like(ds2)
+                else:
+                    ds2[var] = (('t'), list(ds[var].values)*reduce_factor)
+            else:
+                ds2[var] = ds[var]
+
+        # copy over metadata
+        ds2.attrs = ds.attrs
+
+        return ds2
+
+
 @xr.register_dataset_accessor("plotting") 
 class plotMethodAccessor:  
     def __init__(self, xarray_obj):

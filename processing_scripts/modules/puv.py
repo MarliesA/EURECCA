@@ -20,7 +20,7 @@ import pdb
 #         # 1hpa = 1cm waterdiepte
 #         # 1e4 pa = 1m waterdiepte
 #%% 
-def disper(w,h,g=9.8):
+def disper(w, h, g=9.8):
     '''
     DISPER  Linear dispersion relation.
     
@@ -281,7 +281,7 @@ def spectrum_simple(x,y,
 
     return fx, vy
 
-def get_fp(fx,vy,fpmin=0.05): 
+def get_peak_frequency(fx,vy,fpmin=0.05):
     '''
     
 
@@ -925,6 +925,18 @@ def puv_wavedir(freq,_p,_u,_v,fmin=0.01,fmax=1,fresolution=0.02):
     
     return np.arctan2(np.sum(Ppv[ef]),np.sum(Ppu[ef]))*180/np.pi
 
+def _calcParabolaVertex(x1, y1, x2, y2, x3, y3):
+    '''
+    computes the coordinates of the vertex of a parabola through the three points (x1,y1), (x2,y2) and (x3,y3)
+    '''
+    denom = (x1 - x2) * (x1 - x3) * (x2 - x3)
+    A = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / denom
+    B = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / denom
+    C = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / denom
+
+    xv = -B / (2 * A)
+    yv = C - B * B / (4 * A)
+    return xv, yv
 #%%
 def compute_wave_params(fx,vy,S=None,theta=None,fmin=0.01,fmax = 1.5,
                         returntype = 'list'):
@@ -939,21 +951,29 @@ def compute_wave_params(fx,vy,S=None,theta=None,fmin=0.01,fmax = 1.5,
     vsel  = vy[ef]
     em    = np.argmax(vsel) 
     fp    = fsel[em] # peak frequency								
-    Tp    = 1/fp # peak period	
+    Tp    = 1/fp # peak period
+
+    # smoothes peak wave period
+    if em > 0:
+        fps, _ = _calcParabolaVertex(fsel[em-1], vsel[em-1], fsel[em], vsel[em], fsel[em+1], vsel[em+1])
+        Tps = 1 / fps  # smoothed peak period
+    else:
+        Tps = Tp
+
     mom   = calcmoments(fx,vy,fmin=fmin,fmax=fmax)
-    m0    = float(mom['m0'])
-    Hm0   = float(4*np.sqrt(mom['m0'])) # Hm0 = 4*m0^0.5
-    Tm01  = float(mom['m0']/mom['m1']) # Tm01 = m0/m1
-    Tm02  = float(np.sqrt(mom['m0']/mom['m2'])) # Tm02 = (m0/m2)^0.5
-    Tmm10 = float(mom['mm1']/mom['m0']) # Tm-1,0 = (m-1/m0)
-    
+    m0    = mom['m0']
+    Hm0   = 4*np.sqrt(mom['m0']) # Hm0 = 4*m0^0.5
+    Tm01  = mom['m0']/mom['m1'] # Tm01 = m0/m1
+    Tm02  = np.sqrt(mom['m0']/mom['m2']) # Tm02 = (m0/m2)^0.5
+    Tmm10 = mom['mm1']/mom['m0'] # Tm-1,0 = (m-1/m0)
+
     if ((S is None) or (theta is None)):
   
         if returntype == 'list':
-            return Hm0, Tp, Tm01, Tm02, Tmm10
+            return Hm0, Tp, Tm01, Tm02, Tmm10, Tps
         else:
             return {'Hm0':Hm0, 'Tp':Tp, 'Tm01':Tm01, 'Tm02':Tm02,
-               'Tmm10':Tmm10}         
+               'Tmm10':Tmm10, 'Tps': Tps}
     else:            
         # determine mean wave direction and directional spreading, Kuik et al. 1988
         # see SWAN user manual for definitions
@@ -969,10 +989,10 @@ def compute_wave_params(fx,vy,S=None,theta=None,fmin=0.01,fmax = 1.5,
         dspr   = np.rad2deg(np.sqrt(dspr2)) # directional spreading in degrees 
          
         if returntype == 'list':
-            return Hm0, Tp, Tm01, Tm02, Tmm10, theta0, dspr
+            return Hm0, Tp, Tm01, Tm02, Tmm10, Tps, theta0, dspr
         else:
-            return {'Hm0':Hm0, 'Tp':Tp, 'Tm01':Tm01, 'Tm02':Tm02,
-               'Tmm10':Tmm10, 'theta0':theta0[0], 'dirspread':dspr[0]}
+            return {'Hm0': Hm0, 'Tp': Tp, 'Tm01': Tm01, 'Tm02': Tm02,
+               'Tmm10': Tmm10, 'Tps': Tps, 'theta0': theta0[0], 'dirspread': dspr[0]}
    
     
 def compute_dirspread(theta,S,theta0):
