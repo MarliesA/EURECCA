@@ -13,18 +13,31 @@ Created on Fri Mar  23 10:02:14 2023
 if __name__ == "__main__":
 
     script_list = [
-        "01_read_store_raw_data.py",
-        "02_quality_control_adv.py",
-        "02_quality_control_solos.py",
-        "02_quality_control_ossis.py",
-        "02_quality_control_ADCP.py",
-        "03_compute_waves_pressure_loggers",
-        "03_compute_waves_adv.py",
-        "03_tailored_dataset_ADCP.py"
+        "read_store_raw_data.py",
+        "quality_control_adv.py",
+        "quality_control_solos.py",
+        "quality_control_ossis.py",
+        "quality_control_ADCP.py",
+        "tailored_timeseries_pressure_loggers",
+        "tailored_timeseries_adv.py",
+        "tailored_timeseries_ADCP.py"
     ]
+
+    logFile = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments\proclog.txt'
 
     # loop over scripts
     for script in script_list:
-        with open(script) as f:
-            exec(f.read())
+        try:
+
+            with open(script) as f:
+                exec(f.read())
+
+        except Exception as e:
+
+            errstring = "{} not completed because of {}\n".format(script, e)
+            print(errstring)
+
+            # Open a file with access mode 'a'
+            with open(logFile, "a") as file_object:
+                file_object.write(errstring)
 
