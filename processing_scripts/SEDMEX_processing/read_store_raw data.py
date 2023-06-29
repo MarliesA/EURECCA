@@ -9,11 +9,11 @@ import pandas as pd
 import xarray as xr
 import os
 from datetime import datetime
-from modules.vector import Vector
-from modules.solo import Solo
-from modules.ossi import Ossi
-from modules.profiler import Profiler
-from SEDMEX_processing.sedmex_info_loaders import load_instrument_information, add_positioning_info
+from vector import Vector
+from solo import Solo
+from ossi import Ossi
+from profiler import Profiler
+from sedmex_info_loaders import load_instrument_information, add_positioning_info
 
 def load_solo_data(experimentFolder, isxy):
     allSolos = (

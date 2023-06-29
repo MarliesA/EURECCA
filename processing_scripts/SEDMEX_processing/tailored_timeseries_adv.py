@@ -9,8 +9,8 @@ import xarray as xr
 import numpy as np
 import glob
 import os
-import puv
 from datetime import datetime
+import puv
 import xrMethodAccessors
 
 experimentFolder = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments'

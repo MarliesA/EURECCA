@@ -1,9 +1,9 @@
 import xarray as xr
-import matplotlib.pyplot as plt
 import numpy as np
-import xrMethodAccessors
 import glob
 import os
+import xrMethodAccessors
+
 
 
 def tailor_this_dataset(instrumentName):
