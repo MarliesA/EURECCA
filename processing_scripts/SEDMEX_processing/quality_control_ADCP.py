@@ -142,7 +142,7 @@ def qc_this_rawdatafile(instrument, heading, part):
 
 
 
-        # saving
+        # save if there is valid data on the day
         ds.attrs['version'] = 'v1'
         ds.attrs['comment'] = 'Quality checked data:' \
                               ' correlation and amplitude checks done and spikes were removed. ' \
@@ -160,7 +160,7 @@ def qc_this_rawdatafile(instrument, heading, part):
         # generate file name
         ncFilePath = os.path.join(experimentFolder, instrument, r'qc\{}.nc'.format(tstart_string))
 
-        if len(ds.t) == 0:
+        if len(ds.dropna(dim='t').t) > 0:
             continue
 
         if os.path.exists(ncFilePath):

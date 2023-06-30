@@ -224,23 +224,23 @@ if __name__ == "__main__":
     experimentFolder = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments'
     # experimentFolder = r'u:\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments'
     folderinName = 'raw_netcdf'
-    folderoutName = 'QC_230505'
+    folderoutName = 'qc'
     rho = 1028
     g = 9.8
 
     instruments = [
-            # 'L1C1VEC',
-            # 'L2C3VEC',
-            # 'L3C1VEC',
-            # 'L5C1VEC',
-            # 'L6C1VEC',
+             'L1C1VEC',
+             'L2C3VEC',
+             'L3C1VEC',
+             'L5C1VEC',
+             'L6C1VEC',
              'L2C2VEC',
              'L2C4VEC',
-           # 'L2C10VEC',
-           #  'L4C1VEC',
-           # 'L2C5SONTEK1',
-           # 'L2C5SONTEK2',
-           # 'L2C5SONTEK3'
+             'L2C10VEC',
+             'L4C1VEC',
+             'L2C5SONTEK1',
+             'L2C5SONTEK2',
+             'L2C5SONTEK3'
             ]
 
     for instrumentName in instruments:

@@ -13,7 +13,7 @@ import puv
 import xrMethodAccessors
 
 def compute_waves(instr):
-    file = glob.glob(os.path.join(experimentFolder, instr, 'QC', r'*.nc'))
+    file = glob.glob(os.path.join(experimentFolder, instr, 'qc', r'*.nc'))
     with xr.open_dataset(file[0]) as ds:
         ds['zs'] = ds.p.mean(dim='N') / rho / g
         ds['zs'].attrs = {'units': 'm+NAP', 'long_name': 'water level',
@@ -126,6 +126,6 @@ if __name__ == "__main__":
     # first the ossi's
     instruments = ['L2C9OSSI', 'L2C8OSSI', 'L2C6OSSI', 'L1C2OSSI', 'L4C3OSSI', 'L5C2OSSI', 'L6C2OSSI',
                    'L2C10SOLO', 'L2C4SOLO', 'L2C2SOLO', 'L4C1SOLO']
-    for instr in instruments[:1]:
+    for instr in instruments:
         print(instr)
         compute_waves(instr)
