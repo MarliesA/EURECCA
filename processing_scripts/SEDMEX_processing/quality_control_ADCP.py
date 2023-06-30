@@ -99,7 +99,7 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ds['pc'].attrs = {'units': 'Pa', 'long_name': 'pressure',
                           'comments': 'referenced to pressure L2C10SOLO/L2C9OSSI'}
 
-        ds['eta'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
+        ds['eta'] = ds['pc'] / config['physicalConstans']['rho'] / config['physicalConstans']['g']
         ds['eta'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic water level'}
 
         ds['d'] = ds.eta.mean(dim='N') - ds.zb
@@ -182,13 +182,13 @@ if __name__ == "__main__":
 
     config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
 
-    if 'L2C7ADCP' in config['instruments']['ADCP']:
+    if 'L2C7ADCP' in config['instruments']['adcp']:
         instrument = 'L2C7ADCP'
         heading = 78  # because we don't trust the internal compass, we measured this in-situ using gps
         for part in ['1', '2', '3', '4']:
             qc_this_rawdatafile(instrument, heading, part, config)
 
-    if 'L4C1ADCP' in config['instruments']['ADCP']:
+    if 'L4C1ADCP' in config['instruments']['adcp']:
         instrument = 'L4C1ADCP'
         heading = 199  # because we don't trust the internal compass, we measured this in-situ using gps
         for part in ['a1', 'b1', 'a3', 'b3','c3']:

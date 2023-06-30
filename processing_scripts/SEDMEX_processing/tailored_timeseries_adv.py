@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 from datetime import datetime
-import puv
 from sedmex_info_loaders import get_githash
 import xrMethodAccessors
 

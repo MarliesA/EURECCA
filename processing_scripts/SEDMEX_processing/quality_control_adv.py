@@ -168,7 +168,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     ds['w'].attrs = {'units': 'm/s', 'long_name': 'velocity U'}
 
     # saving
-    if 'SONTEK' in instrument
+    if 'SONTEK' in instrument:
         ds.attrs['summary'] = 'Quality checked data: correlation checks done and spikes were removed.' \
                 'Velocities rotated to ENU coordinates based on heading and configuration in the field.' \
                                        'data that was marked unfit has been removed or replaced by interpolation.'\

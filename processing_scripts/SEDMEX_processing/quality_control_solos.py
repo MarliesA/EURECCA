@@ -11,7 +11,7 @@ def cast_to_blocks(ds0, burstDuration):
     # reshape to one row per burst in data array
     pt = ds0.p.values
     nSamples = len(pt)
-    dt = ds0.isel(t=1).t - ds0.isel(t=0).t
+    dt = pd.to_timedelta((ds0.isel(t=1).t - ds0.isel(t=0).t).to_numpy()).total_seconds()
 
     burstLength = int(burstDuration / dt)
     nBursts = int(np.floor(nSamples / burstLength))
@@ -36,7 +36,7 @@ def cast_to_blocks(ds0, burstDuration):
     ds['zi'] = zi
     ds['zb'] = zb
     ds['h'] = h
-    ds['sf'] = ds0.sf
+
 
     return ds
 
@@ -87,16 +87,18 @@ if __name__ == "__main__":
         pair = dsCtd.p.interp_like(ds0)
         p2 = ds0.p - pair
         p_dry = p2.resample({'t': '15T'}, loffset='15T').mean().sel({'t': pd.to_datetime(reft[instr])})
-        p3 = p2 - p_dry.interp_like(ds0.p,method='linear').bfill(dim='t').ffill(dim='t')
+        p3 = p2 - p_dry.interp_like(ds0.p, method='linear').bfill(dim='t').ffill(dim='t')
         ds0['p'] = p3 + ds0.zi*config['physicalConstans']['rho']*config['physicalConstans']['g']
 
         ds = cast_to_blocks(ds0, burstDuration=config['burstDuration']['solo'])
+        ds['sf'] = config['samplingFrequency']['ossi']
+        ds['sf'].attrs = {'units': 'Hz', 'long_name': 'sampling frequency'}
 
         # remove all bursts where instrument fell dry
         ds['p'] = ds.p.where( ds.p.std(dim='N') > 70)
-        ds['p'].attrs = {'units': 'Pa +NAP','long_name': 'pressure','comments': 'corrected for air pressure'}
+        ds['p'].attrs = {'units': 'Pa +NAP', 'long_name': 'pressure','comments': 'corrected for air pressure'}
 
-        ds['zi'].attrs = {'units': 'm+NAP','long_name': 'zi'}
+        ds['zi'].attrs = {'units': 'm+NAP', 'long_name': 'zi'}
         ds['zb'].attrs = {'units': 'm+NAP','long_name': 'zb'}
         ds['sf'].attrs = {'units': 'Hz','long_name': 'sampling frequency'}
         ds.attrs = ds0.attrs
