@@ -286,11 +286,9 @@ def compute_waves(instrument, config):
                               'comment': 'burst averaged'}
 
             if not 'SONTEK' in instrument:
-                ds['k'] = xr.apply_ufunc(lambda tm01, h: puv.disper(2 * np.pi / tm01, h), ds['Tmm10'],
-                                         ds['zs'] - ds['zb'])
+                ds['k'] = ds.puv.disper(T='Tmm10', d='d')
                 ds['k'].attrs = {'units': 'm-1', 'long_name': 'k'}
-                ds['Ur'] = xr.apply_ufunc(lambda hm0, k, h: 3 / 4 * 0.5 * hm0 * k / (k * h) ** 3, ds['Hm0'], ds['k'],
-                                          ds['zs'] - ds['zb'])
+                ds['Ur'] = ds.puv.Ursell(Hm0='Hm0', k='k', d='d')
                 ds['Ur'].attrs = {'units': '-', 'long_name': 'Ursell'}
 
             ds['nAs'] = ds.As / ds.sig ** 3
