@@ -143,7 +143,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
 
 
     # rename coordinates if horizontally placed
-    if ((instrumentName == 'L2C2VEC') | (instrumentName == 'L2C4VEC')):
+    if ((instrument == 'L2C2VEC') | (instrument == 'L2C4VEC')):
         ufunc = lambda u, v, w: hor2vert_vector_mapping(u, v, w)
         ds['u'], ds['v'], ds['w'] = xr.apply_ufunc(ufunc,
                                                    ds['u'], ds['v'], ds['w'],
@@ -152,7 +152,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
                                                    vectorize=True)
 
     # UU instruments flexheads so downward pos instead of upward pos
-    if (instrumentName in ['L1C1VEC', 'L2C3VEC', 'L3C1VEC', 'L5C1VEC', 'L6C1VEC']):
+    if (instrument in ['L1C1VEC', 'L2C3VEC', 'L3C1VEC', 'L5C1VEC', 'L6C1VEC']):
         ds['v'] = -ds['v']
         ds['w'] = -ds['w']
 
@@ -168,11 +168,19 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     ds['w'].attrs = {'units': 'm/s', 'long_name': 'velocity U'}
 
     # saving
-    ds.attrs['version'] = 'v3'
-    ds.attrs['comment'] = 'Quality checked data: pressure reference level corrected for airpressure drift,' \
-                          ' correlation checks done and spikes were removed. ' \
-                          'Velocities rotated to ENU coordinates based on heading and configuration in the field.' \
-                          'data that was marked unfit has been removed or replaced by interpolation.'
+    if 'SONTEK' in instrument
+        ds.attrs['summary'] = 'Quality checked data: correlation checks done and spikes were removed.' \
+                'Velocities rotated to ENU coordinates based on heading and configuration in the field.' \
+                                       'data that was marked unfit has been removed or replaced by interpolation.'\
+                                       'Pressure was referenced to air pressure.' \
+                                       'Variance of the pressure signal only to be used for directional wave distribution,' \
+                                       ' not for wave heights (scale is off and the Sontek pressure sensor is uncalibrated).'
+    else:
+        ds.attrs['summary'] = 'Quality checked data: correlation checks done and spikes were removed,' \
+                              'Velocities rotated to ENU coordinates based on heading and configuration in the field.' \
+                              'data that was marked unfit has been removed or replaced by interpolation.'\
+                              'Pressure was referenced to air pressure.'
+
 
     # save to netCDF
     # all variables that are only used for the QC are block averaged to reduce amount of info on QC files
@@ -214,14 +222,14 @@ if __name__ == "__main__":
     fileZsRef = os.path.join(config['experimentFolder'], 'waterlevel.nc')
     ds_presref = xr.open_dataset(fileZsRef)
 
-    for instrumentName in config['instruments']['adv']['vector'] + config['instruments']['adv']['sontek'] :
-        print(instrumentName)
+    for instrument in config['instruments']['adv']['vector'] + config['instruments']['adv']['sontek'] :
+        print(instrument)
 
         # find all raw data on file for this instrument
-        fileNames = glob.glob(os.path.join(config['experimentFolder'], instrumentName, 'raw_netcdf', '*.nc'))
+        fileNames = glob.glob(os.path.join(config['experimentFolder'], instrument, 'raw_netcdf', '*.nc'))
 
         # ensure the output folder exists
-        folderOut = os.path.join(config['experimentFolder'], instrumentName, 'qc')
+        folderOut = os.path.join(config['experimentFolder'], instrument, 'qc')
         if not os.path.isdir(folderOut):
             os.mkdir(folderOut)
 
