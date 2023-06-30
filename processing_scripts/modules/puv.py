@@ -1024,8 +1024,8 @@ def compute_spectral_width(fx,vy,fmin=None,fmax=None):
     
     mom   = calcmoments(fx,vy)
     
-    m0 = float(mom['m0'])    
-    Tm02  = float(np.sqrt(mom['m0']/mom['m2'])) # Tm02 = (m0/m2)^0.5
+    m0 = mom['m0']
+    Tm02  = np.sqrt(mom['m0']/mom['m2']) # Tm02 = (m0/m2)^0.5
     fbar0 = 1/Tm02
     
     part1 = np.trapz(np.cos(2*np.pi*fx/fbar0)*vy,fx)
