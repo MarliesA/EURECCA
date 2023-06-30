@@ -1,0 +1,127 @@
+# SEDMEX data processing configuration file
+# Marlies van der Lugt - 20230630
+---
+experimentFolder: //tudelft.net/staff-umbrella/EURECCA/fieldvisits/20210908_campaign/instruments
+instruments:
+    adv:
+        vector:
+        - L1C1VEC
+        - L2C3VEC
+        - L3C1VEC
+        - L5C1VEC
+        - L6C1VEC
+        - L2C2VEC
+        - L2C4VEC
+        - L2C10VEC
+        - L4C1VEC
+        sontek:
+        - L2C5SONTEK1
+        - L2C5SONTEK2
+        - L2C5SONTEK3 
+    ossi: 
+    - L2C9OSSI
+    - L2C8OSSI 
+    - L2C6OSSI 
+    - L1C2OSSI
+    - L4C3OSSI 
+    - L5C2OSSI 
+    - L6C2OSSI   
+    solo: 
+    - L2C2SOLO
+    - L2C4SOLO
+    - L2C10SOLO
+    - L4C1SOLO
+    adcp:
+    - L2C7ADCP
+    - L4C1ADCP
+samplingFrequencies:
+    solo: 8
+    ossi: 10
+    sontek: 8
+    adv: 16
+    adcp: 4
+physicalConstans:
+    g: 9.8
+    rho: 1028
+beachOrientation:           # direction of shore-normal (cartesian convention)
+    L1C1VEC: 165
+    L2C3VEC: 135
+    L3C1VEC: 122
+    L5C1VEC: 135
+    L6C1VEC: 142
+    L2C2VEC: 135
+    L2C4VEC: 135
+    L2C10VEC: 135
+    L4C1VEC: 122
+    L2C5SONTEK1: 135
+    L2C5SONTEK2: 135
+    L2C5SONTEK3: 135
+burstDuration:
+    solo: 600
+    ossi: 600
+    sontek: 600
+    adv: 600
+    adcp: 1800
+qcADVSettings:
+    uLim:                   # maximum valid velocity in u-direction  
+        L1C1VEC: 2.1
+        L2C3VEC: 2.1
+        L3C1VEC: 2.1
+        L5C1VEC: 2.1
+        L6C1VEC: 2.1
+        L2C2VEC: 1.5
+        L2C4VEC: 1.5
+        L2C10VEC: 2.1
+        L4C1VEC: 2.1
+        L2C5SONTEK1: 2.1
+        L2C5SONTEK2: 2.1
+        L2C5SONTEK3: 2.1
+    vLim: 2.1               # maximum valid velocity in v-direction  
+    wLim:                   # maximum valid velocity in w-direction  
+        L1C1VEC: 0.6
+        L2C3VEC: 0.6
+        L3C1VEC: 0.6
+        L5C1VEC: 0.6
+        L6C1VEC: 0.6
+        L2C2VEC: 1.5
+        L2C4VEC: 1.5
+        L2C10VEC: 0.6
+        L4C1VEC: 0.6
+        L2C5SONTEK1: 0.6
+        L2C5SONTEK2: 0.6
+        L2C5SONTEK3: 0.6
+    corTreshold: 50         # minimum intra-beam correlation for valid sample
+    ampTreshold:            # minimum return amplitude for valid sample
+        L1C1VEC: 80
+        L2C3VEC: 80
+        L3C1VEC: 80
+        L5C1VEC: 80
+        L6C1VEC: 80
+        L2C2VEC: 40
+        L2C4VEC: 40
+        L2C10VEC: 80
+        L4C1VEC: 80
+        L2C5SONTEK1: 100
+        L2C5SONTEK2: 100
+        L2C5SONTEK3: 100
+    maxGap: 12             # max no. consecutive nans in timeseries  
+    maxFracNans: 0.05      # max % outliers for valid timeseries
+    waterHeadMargin: 0.05  # m of water head above instrument for valid timeseries
+    outlierCrit: 4
+qcADCPSettings:
+    ampTreshold: 100
+    corTreshold: 30
+    uLim: 0.9
+    outlierCrit: 3
+    maxFracNans: 0.05      # max % outliers for valid timeseries
+    maxGap: 8              # max no. consecutive nans in timeseries  
+tailoredWaveSettings:
+    fresolution: 0.02      # Hz
+    thetaresolution: 4     # deg
+    fmin: 0.05
+    fmax: 1.5
+    fmax_ss: 8
+    fmax_skas0: 1
+    
+    
+    
