@@ -7,8 +7,8 @@ Created on Fri Mar  23 10:02:14 2023
 - This script contains the workflow to do all processing on hydrodynamics of the PHZD.
 - All scripts make use of the configuration file sedmex-processing.yml that is read in at the top of each script
 - This ensures that all scripts can also be run standalone besides being called from this wrapper file
-- All reading and writing is done from the experimentFolder, prescribed in the config file.
-- All data is saved to netcdf, then quality checked and finally published into tailored time series
+- Reading and writing is done from the experimentFolder, prescribed in the config file.
+- Data is saved to netcdf, then quality checked and finally published into tailored time series
 - Check the respective scripts for further description of the processing steps performed
 """
 from datetime import datetime
@@ -21,9 +21,10 @@ if __name__ == "__main__":
         "quality_control_solos.py",
         "quality_control_ossis.py",
         "quality_control_ADCP.py",
-        "tailored_timeseries_pressure.py"
+        "tailored_timeseries_pressure.py",
         "tailored_timeseries_adv.py",
-        "tailored_timeseries_ADCP.py"
+        "tailored_timeseries_ADCP.py",
+        "reduce_tailored_timeseries"
     ]
 
     logFile = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments\proclog.txt'
