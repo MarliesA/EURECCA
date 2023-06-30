@@ -14,7 +14,7 @@ def tailor_this_dataset(instrumentName):
     if not os.path.isdir(ncOutDir):
         os.mkdir(ncOutDir)
 
-    for file in fileNames:
+    for file in fileNames[-1:]:
         print(file)
         ds = xr.open_dataset(file)
 
@@ -91,6 +91,10 @@ def tailor_this_dataset(instrumentName):
         ##########################################################################
         print('statistics from pressure')
         _, vy = ds.puv.spectrum_simple('eta', fresolution=fresolution)
+
+        if vy.shape[0] == 0:
+            print('no valid pressure data remains on this day')
+            continue
 
         # compute the attenuation factor
         # attenuation corrected spectra
