@@ -14,7 +14,7 @@ def tailor_this_dataset(instrumentName):
     if not os.path.isdir(ncOutDir):
         os.mkdir(ncOutDir)
 
-    for file in fileNames[-1:]:
+    for file in fileNames:
         print(file)
         ds = xr.open_dataset(file)
 

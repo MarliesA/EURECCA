@@ -99,7 +99,11 @@ for instrumentName, beachOri in zip(instruments, beachOrientation):
             ##########################################################################
             if not 'SONTEK' in instrumentName:
                 print('statistics from pressure')
-                _,vy   = ds.puv.spectrum_simple('eta', fresolution=fresolution)
+                _, vy = ds.puv.spectrum_simple('eta', fresolution=fresolution)
+
+                if vy.shape[0] == 0:
+                    print('no valid pressure data remains on this day')
+                    continue
 
                 # compute the attenuation factor
                 # attenuation corrected spectra
