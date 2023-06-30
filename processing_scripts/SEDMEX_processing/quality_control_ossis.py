@@ -96,8 +96,9 @@ if __name__ == "__main__":
 
         # if nothing else, at least specify lossless zlib compression
         comp = dict(zlib=True, complevel=5)
-        ds2.encoding = {var: comp for var in ds2.data_vars}
-        ds.encoding['t'] = {'zlib': False, '_FillValue': None}
-        ds.encoding['N'] = {'zlib': False, '_FillValue': None}
+        ds.encoding = {var: comp for var in ds.data_vars}
+        for coord in list(ds.coords.keys()):
+            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
+
         ds2.to_netcdf(ncFilePath, encoding=ds2.encoding )
 

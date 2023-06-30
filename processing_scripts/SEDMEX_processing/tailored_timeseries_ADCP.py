@@ -244,6 +244,8 @@ def tailor_this_dataset(instrument, config):
         # specify compression for all the variables to reduce file size
         comp = dict(zlib=True, complevel=5)
         ds.encoding = {var: comp for var in ds.data_vars}
+        for coord in list(ds.coords.keys()):
+            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
         ds.to_netcdf((os.path.join(ncOutDir, file.split('\\')[-1])))
 

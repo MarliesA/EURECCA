@@ -50,7 +50,14 @@ def load_solo_data(config):
         ncOutDir = os.path.join(conf['experimentFolder'], instrumentName, 'raw_netcdf')
         if not os.path.isdir(ncOutDir):
             os.mkdir(ncOutDir)
-        ds.to_netcdf(os.path.join(ncOutDir, instrumentName + '.nc'))
+
+        # if nothing else, at least specify lossless zlib compression
+        comp = dict(zlib=True, complevel=5)
+        ds.encoding = {var: comp for var in ds.data_vars}
+        for coord in list(ds.coords.keys()):
+            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
+
+        ds.to_netcdf(os.path.join(ncOutDir, instrumentName + '.nc'), encoding = ds.encoding)
 
     return
 
@@ -74,6 +81,9 @@ def load_ossi_data(config):
         # if nothing else, at least specify lossless zlib compression
         comp = dict(zlib=True, complevel=5)
         ds.encoding = {var: comp for var in ds.data_vars}
+        for coord in list(ds.coords.keys()):
+            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
+
         ds.to_netcdf(ncFilePath, encoding=ds.encoding)
 
     return
@@ -135,8 +145,11 @@ def vector_read_write_to_netcdf(instrumentName, experimentFolder, dataPath, isxy
             'version comments': 'constructed with xarray'}
 
         # specify compression for all the variables to reduce file size
+        # if nothing else, at least specify lossless zlib compression
         comp = dict(zlib=True, complevel=5)
         ds.encoding = {var: comp for var in ds.data_vars}
+        for coord in list(ds.coords.keys()):
+            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
         # save to netCDF
         fold = os.path.join(experimentFolder, instrumentName, 'raw_netcdf')
@@ -265,6 +278,8 @@ def load_sontek_data(instrumentName, config):
             # specify compression for all the variables to reduce file size
             comp = dict(zlib=True, complevel=5)
             ds.encoding = {var: comp for var in ds.data_vars}
+            for coord in list(ds.coords.keys()):
+                ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
             ds.to_netcdf(os.path.join(outfolder, rawdatafilenumber + '.nc'), encoding=ds.encoding)
 
@@ -303,6 +318,8 @@ def load_ADCP_data(config):
             # specify compression for all the variables to reduce file size
             comp = dict(zlib=True, complevel=5)
             ds.encoding = {var: comp for var in ds.data_vars}
+            for coord in list(ds.coords.keys()):
+                ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
             # save to netCDF
             fold = os.path.join(config['experimentFolder'], instrument, 'raw_netcdf')
@@ -345,6 +362,8 @@ def load_ADCP_data(config):
             # specify compression for all the variables to reduce file size
             comp = dict(zlib=True, complevel=5)
             ds.encoding = {var: comp for var in ds.data_vars}
+            for coord in list(ds.coords.keys()):
+                ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
             # save to netCDF
             fold = os.path.join(config['experimentFolder'], instrument, 'raw_netcdf')

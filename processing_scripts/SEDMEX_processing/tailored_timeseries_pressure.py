@@ -105,9 +105,8 @@ def compute_waves(instr, config):
         # if nothing else, at least specify lossless zlib compression
         comp = dict(zlib=True, complevel=5)
         ds.encoding = {var: comp for var in ds.data_vars}
-        ds.encoding['t'] = {'zlib': False, '_FillValue': None}
-        ds.encoding['N'] = {'zlib': False, '_FillValue': None}
-        ds.encoding['f'] = {'zlib': False, '_FillValue': None}
+        for coord in list(ds.coords.keys()):
+            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
         ds.to_netcdf(ncFilePath, encoding=ds.encoding)
 

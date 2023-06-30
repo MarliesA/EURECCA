@@ -262,9 +262,9 @@ if __name__ == "__main__":
                             # write to file
                             # specify compression for all the variables to reduce file size
                             comp = dict(zlib=True, complevel=5)
-                            ds_merge.encoding = {var: comp for var in ds_merge.data_vars}
-                            ds_merge.encoding['t'] = {'zlib': False, '_FillValue': None}
-                            ds_merge.encoding['N'] = {'zlib': False, '_FillValue': None}
+                            ds.encoding = {var: comp for var in ds.data_vars}
+                            for coord in list(ds.coords.keys()):
+                                ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
                             ds_merge.to_netcdf(ncFilePath, encoding=ds_merge.encoding)
 

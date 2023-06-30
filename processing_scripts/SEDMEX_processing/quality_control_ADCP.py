@@ -168,7 +168,8 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         # specify compression for all the variables to reduce file size
         comp = dict(zlib=True, complevel=5)
         ds.encoding = {var: comp for var in ds.data_vars}
-        ds.to_netcdf(ncFilePath, encoding=ds.encoding)
+        for coord in list(ds.coords.keys()):
+            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
     return
 
