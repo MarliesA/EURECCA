@@ -90,6 +90,10 @@ def tailor_this_dataset(instrument, config):
         print('statistics from pressure')
         _, vy = ds.puv.spectrum_simple('eta', fresolution=fresolution)
 
+        if vy.shape[0] == 0:
+            print('no valid pressure data remains on this day')
+            continue
+
         # compute the attenuation factor
         # attenuation corrected spectra
         Sw = ds.puv.attenuation_factor('pressure', elev='elev', d='d')

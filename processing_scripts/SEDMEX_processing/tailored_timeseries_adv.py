@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Dec  8 16:28:24 2021
+
+@author: marliesvanderl
+"""
+
+import xarray as xr
+import numpy as np
 import glob
 import os
 import yaml
@@ -19,7 +28,9 @@ def compute_waves(instrument, config):
     if not os.path.isdir(ncOutDir):
         os.mkdir(ncOutDir)
 
+    dsList = []
     for file in fileNames:
+       # try:
         with xr.open_dataset(file) as ds:
             if len(ds.t) == 0:
                 print(file + ' is empty!')
@@ -69,7 +80,11 @@ def compute_waves(instrument, config):
             ##########################################################################
             if not 'SONTEK' in instrument:
                 print('statistics from pressure')
-                _, vy = ds.puv.spectrum_simple('eta', fresolution=fresolution)
+                _,vy   = ds.puv.spectrum_simple('eta', fresolution=fresolution)
+
+                if vy.shape[0] == 0:
+                    print('no valid pressure data remains on this day')
+                    continue
 
                 # compute the attenuation factor
                 # attenuation corrected spectra
