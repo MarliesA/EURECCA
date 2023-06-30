@@ -1,30 +1,24 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 13 16:26:41 2022
-
-@author: marliesvanderl
-"""
-import xarray as xr
-import numpy as np
 import glob
 import os
+import yaml
+from pathlib import Path
+import xarray as xr
+import numpy as np
 from datetime import datetime
 import puv
 import xrMethodAccessors
 
-def compute_waves(instr):
-    file = glob.glob(os.path.join(experimentFolder, instr, 'qc', r'*.nc'))
+def compute_waves(instr, config):
+    file = glob.glob(os.path.join(config['experimentFolder'], instr, 'qc', r'*.nc'))
     with xr.open_dataset(file[0]) as ds:
-        ds['zs'] = ds.p.mean(dim='N') / rho / g
+        ds['zs'] = ds.p.mean(dim='N') / config['physicalConstants']['rho'] / config['physicalConstants']['g']
         ds['zs'].attrs = {'units': 'm+NAP', 'long_name': 'water level',
                           'comment': 'burst averaged'}
 
         ds['d'] = ds.zs - ds.zb
         ds['d'].attrs = {'long_name': 'water depth', 'units': 'm'}
 
-        # powerStep = 8  # 8 for investigating the spectra at 8 Hz: 8 = 0.03Hz resolution
-        # fresolution = np.round(ds.sf.values * np.exp(-np.log(2) * powerStep), 5)
-        fresolution = 0.02
+        fresolution = config['tailoredWaveSettings']['fresolution']
         ds2 = xr.Dataset(
             data_vars={},
             coords=dict(t=ds.t,
@@ -40,7 +34,7 @@ def compute_waves(instr):
         ds2.attrs = ds.attrs
         ds = ds2
 
-        ds['eta'] = ds.p / rho / g
+        ds['eta'] = ds.p / config['physicalConstants']['rho'] / config['physicalConstants']['g']
         _, vy = ds.puv.spectrum_simple('eta', fresolution=fresolution)
 
         ds['elev'] = ds.zi - ds.zb
@@ -50,7 +44,7 @@ def compute_waves(instr):
         ds['vy'] = Q * vy
         ds['vy'].attrs = {'units': 'm2/hz', 'long_name': 'variance density of surface elevation'}
 
-        kwargs = {'fmin': 0.05, 'fmax': 1.5}
+        kwargs = {'fmin': config['tailoredWaveSettings']['fmin'], 'fmax': config['tailoredWaveSettings']['fmax']}
         ds['Hm0'], ds['Tp'], ds['Tm01'], ds['Tm02'], ds['Tmm10'], ds['Tps'] = (
             ds.puv.compute_wave_params(var='vy', **kwargs)
         )
@@ -71,24 +65,26 @@ def compute_waves(instr):
         ds['Ur'].attrs = {'units': '-', 'long_name': 'Ursell'}
 
         # in the original freq range
+        shapeBounds0 = [config['tailoredWaveSettings']['fmin'], config['tailoredWaveSettings']['fmax0']]
 
         ds['Skp0'], ds['Asp0'], ds['sigp0'] = (
-            ds.puv.compute_SkAs('eta', fixedBounds=True, bounds=[0.05, 1])
+            ds.puv.compute_SkAs('eta', fixedBounds=True, bounds=shapeBounds0)
         )
 
-        ds['Skp0'].attrs = {'units': 'm3/s3', 'long_name': 'skewness',
-                            'comment': 'pressure-based between 0.05 and 1 Hz'}
-        ds['Asp0'].attrs = {'units': 'm3/s3', 'long_name': 'asymmetry',
-                            'comment': 'pressure-based between 0.05 and 1 Hz'}
-        ds['sigp0'].attrs = {'units': 'm/s', 'long_name': 'std(ud)', 'comment': 'pressure-based between 0.05 and 1 Hz'}
+        ds['Skp0'].attrs = {'units': 'm3', 'long_name': 'skewness',
+                            'comment': 'pressure-based between {} and {} Hz'.format(shapeBounds0[0], shapeBounds0[1])}
+        ds['Asp0'].attrs = {'units': 'm3', 'long_name': 'asymmetry',
+                            'comment': 'pressure-based between {} and {} Hz'.format(shapeBounds0[0], shapeBounds0[1])}
+        ds['sigp0'].attrs = {'units': 'm', 'long_name': 'std(ud)',
+                             'comment': 'pressure-based between {} and {} Hz'.format(shapeBounds0[0], shapeBounds0[1])}
 
         # in a band scaled with peak period
-        ds['Skp'], ds['Asp'], ds['sigp'] = ds.puv.compute_SkAs('eta')
+        ds['Skp'], ds['Asp'], ds['sigp'] = ds.puv.compute_SkAs('eta', fixedBounds=False)
 
-        ds['Skp'].attrs = {'units': 'm3/s3', 'long_name': 'skewness', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
-        ds['Asp'].attrs = {'units': 'm3/s3', 'long_name': 'asymmetry',
+        ds['Skp'].attrs = {'units': 'm3', 'long_name': 'skewness', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
+        ds['Asp'].attrs = {'units': 'm3', 'long_name': 'asymmetry',
                            'comment': 'pressure-based between 0.5Tp and 2Tp'}
-        ds['sigp'].attrs = {'units': 'm/s', 'long_name': 'std(ud)', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
+        ds['sigp'].attrs = {'units': 'm', 'long_name': 'std(ud)', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
 
         ds['nAs'] = ds.Asp / ds.sigp ** 3
         ds['nSk'] = ds.Skp / ds.sigp ** 3
@@ -101,7 +97,7 @@ def compute_waves(instr):
         ds.attrs['construction datetime'] = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
 
         # saving to file
-        fold = os.path.join(experimentFolder, instr, 'tailored')
+        fold = os.path.join(config['experimentFolder'], instr, 'tailored')
         if not os.path.isdir(fold):
             os.mkdir(fold)
         ncFilePath = os.path.join(fold, '{}.nc'.format(instr))
@@ -119,13 +115,9 @@ def compute_waves(instr):
 
 
 if __name__ == "__main__":
-    experimentFolder = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments'
-    rho = 1028
-    g = 9.8
 
-    # first the ossi's
-    instruments = ['L2C9OSSI', 'L2C8OSSI', 'L2C6OSSI', 'L1C2OSSI', 'L4C3OSSI', 'L5C2OSSI', 'L6C2OSSI',
-                   'L2C10SOLO', 'L2C4SOLO', 'L2C2SOLO', 'L4C1SOLO']
-    for instr in instruments:
+    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+
+    for instr in config['instruments']['ossi'] + config['instruments']['solo']:
         print(instr)
-        compute_waves(instr)
+        compute_waves(instr, config)

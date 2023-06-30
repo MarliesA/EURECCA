@@ -1,25 +1,15 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan  8 12:18:28 2021
-
-@author: marliesvanderl
-email: m.a.vanderlugt@tudelft.nl
-"""
-
 import numpy as np
 import pandas as pd
 from scipy.fft import fft, ifft
 from scipy import signal
 from scipy.optimize import minimize
 from bisect import bisect
-import  matplotlib.pyplot as plt
-import warnings
-import pdb
-#     #units:
+
+#         #units:
 #         # 1dbar = 1m waterdiepte
 #         # 1hpa = 1cm waterdiepte
 #         # 1e4 pa = 1m waterdiepte
-#%% 
+
 def disper(w, h, g=9.8):
     '''
     DISPER  Linear dispersion relation.
@@ -127,7 +117,7 @@ def disper_cur(w,h,u,g=9.8):
 def Ursell(hm0, k, d):
     return 3/4 * 0.5 * hm0*k/(k*d)**3
 
-#%%
+
 def fourier_window(Nr,windowFilter = 'Hann'):
     
     F = np.arange(0,Nr)/(Nr-1)
@@ -141,7 +131,7 @@ def fourier_window(Nr,windowFilter = 'Hann'):
 
 
 
-#%%            
+
 def spectrum_simple(x,y,
                     fresolution=0.01,
                     Nr=None,
@@ -317,7 +307,7 @@ def get_peak_frequency(fx,vy,fpmin=0.05):
             return None
     return fp
 
-#%%
+
 def attenuation_factor(Type, elev, h, fx,
                        maxSwfactor = 5,
                        fcorrmaxBelieve = 1,
@@ -524,7 +514,7 @@ def attenuate_signal(Type,f,x,hmean,zi,zb,
      
     return zs
 
-#%%       
+
 def jspect(X,Y,N,DT=1,DW='hann',OVERLAP=0,DETREND=1,jaPrint = False):
     '''
     function F,P=jspect(X,Y,N,DT,DW,OVERLAP,DETREND)
@@ -631,7 +621,7 @@ def jspect(X,Y,N,DT=1,DW='hann',OVERLAP=0,DETREND=1,jaPrint = False):
     return F,P
 
 
-#%%
+
 def calcmoments(fx,vy,fmin=-9999,fmax=9999):
     """
     Created on Tue Mar 26 13:13:17 2019
@@ -670,7 +660,7 @@ def calcmoments(fx,vy,fmin=-9999,fmax=9999):
     
     return moments
 
-#%%
+
 def fungrad(mu,P_Ni,ntheta,dtheta,qk1):
     """
     Created on Mon Jun  3 21:23:52 2019
@@ -720,7 +710,7 @@ def fungrad(mu,P_Ni,ntheta,dtheta,qk1):
     return q, g
 
 
-#%%
+
 def wave_MEMpuv(_p, _u, _v, depth, sensorlevel, bedlevel,freq,
                 fresolution=0.05,
                 ntheta = 64,      
@@ -937,7 +927,7 @@ def _calcParabolaVertex(x1, y1, x2, y2, x3, y3):
     xv = -B / (2 * A)
     yv = C - B * B / (4 * A)
     return xv, yv
-#%%
+
 def compute_wave_params(fx,vy,S=None,theta=None,fmin=0.01,fmax = 1.5,
                         returntype = 'list'):
     '''
@@ -1036,7 +1026,7 @@ def compute_spectral_width(fx,vy,fmin=None,fmax=None):
     
     return kappa
 
-#%%
+
 def quality_check_signal(x,
                          pflags = 0.05,
                          vari = 4,
@@ -1069,7 +1059,7 @@ def quality_check_signal(x,
     '''
     
     if np.sum(np.isnan(x))>0:
-        warnings.warn('x contains nans')
+        print('x contains nans')
         return x
     
     pex = x.copy()
@@ -1106,7 +1096,7 @@ def quality_check_signal(x,
         
     return x2+trend
 
-#%%
+
 def fft_with_frequency(sf,p):
     '''
 
@@ -1156,7 +1146,7 @@ def fft_with_frequency(sf,p):
 
     return {'V':V,'A':A,'PHI':PHI,'Qn':Qn,'f':f,'Q':Q,'ft':ft}    
  
-#%%   
+
 def pressure2velocity(sf,p,z,hmean,zi,zb,
                       rho=1000,
                       g = 9.8,
@@ -1415,7 +1405,7 @@ def band_pass_filter2(sf,x,fmin=0.05,fmax=3,retrend=True):
         return ifft(Q2).real + pex 
     else: 
         return ifft(Q2).real
-#%%
+
 
 def compute_SVD_angle(sf,u,v,fmin,fmax):
     u = band_pass_filter2(sf,u,fmin=fmin,fmax=fmax)
@@ -1446,7 +1436,7 @@ def SVD_dirspread(ud,vd):
     returns: degrees
     '''
     return np.arctan2(np.sqrt(np.sum(vd**2)/np.sum(ud**2)))/np.pi*180
-#%%
+
 def compute_SkAs(sf,p,fpfac =None, fbounds = None):
     '''
     
@@ -1492,7 +1482,7 @@ def compute_SkAs(sf,p,fpfac =None, fbounds = None):
     return Sk, As, sig
 
 
-#%%
+
 def guza_split_waves(t,zsi,umi,zb,boundopt):
     '''
     Guza_split_waves(t,zsi,umi,zb,boundopt)
@@ -1657,7 +1647,7 @@ def guza_split_waves(t,zsi,umi,zb,boundopt):
         
     return zsin, zsout, uin, uout, reflc
 
-#%%
+
 def ruessink_predict_shape(Ur):
     '''
     ruessink_predict_shape(Ur)
@@ -1679,7 +1669,7 @@ def ruessink_predict_shape(Ur):
     Sk   = B*np.cos(np.pi*Psi/180)
     As   = B*np.sin(np.pi*Psi/180) 
     return Sk, As
-#%%        
+
 # def wave_zero_crossing(eta,fs,detrend = True,jaFig = False):
 #     '''
 #     wave_zero_crossing(eta,fs,detrend=True,jaFig=False)
@@ -1847,16 +1837,7 @@ def ruessink_predict_shape(Ur):
 #     Tz=np.mean(TUp) # Zero-crossing mean wave period
 
 #     var = {'EtaRMS':Etarms, 'Hz':Hz, 'Tz':Tz, 'Hs':Hs, 'Ts':Ts}
-    
-#     if jaFig:
-#         plt.figure()
-#         plt.plot(t,eta,'.-')
-#         plt.plot(xUpCross,yUpCross,'ro')
-#         plt.plot(xDownCross,yDownCross,'bo')
-#         plt.plot(tmin,ymin,'ko')
-#         plt.plot(tmax,ymax,'ko')
-        
-    
+
 #     return var    
     
     

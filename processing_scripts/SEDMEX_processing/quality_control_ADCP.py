@@ -1,21 +1,13 @@
-import xarray as xr
-import matplotlib.pyplot as plt
-import numpy as np
-import puv
 import os
+import yaml
+from pathlib import Path
+import numpy as np
 import pandas as pd
+import xarray as xr
+import puv
 
-crit_amp = 100
-crit_cor = 30  # we should use 50 percent but then we miss all information near the bed
-crit_v = np.sqrt(0.84**2+0.35**2)  # based on maximum velocities based on instrument settings
-crit_outlier = 3
-qc_maxfracnans = 0.05
-qc_maxgap = 8
-rho = 1025
-g = 9.8
-
-def qc_this_rawdatafile(instrument, heading, part):
-    ds = xr.open_dataset(os.path.join(experimentFolder, instrument, r'raw_netcdf\part' + part + '.nc'))
+def qc_this_rawdatafile(instrument, heading, part, config):
+    ds = xr.open_dataset(os.path.join(config['experimentFolder'], instrument, r'raw_netcdf\part' + part + '.nc'))
 
     # what range of dates sits in this part of the datase?
     ds_tmin = ds.t.min().dt.floor('1D').values
@@ -24,31 +16,35 @@ def qc_this_rawdatafile(instrument, heading, part):
     # we do the work 1 day per time
     for tstart in pd.date_range(ds_tmin, ds_tmax):
 
-        #DEBUG
-        #if tstart < pd.to_datetime('20210922'):
-        #    continue
-
         tstart_string = str(tstart)[:10].replace('-', '')
         print(tstart_string)
 
         tstop = tstart + pd.to_timedelta('1D')
 
-        ds = xr.open_dataset(os.path.join(experimentFolder, instrument, r'raw_netcdf\part' + part + '.nc'))
+        ds = xr.open_dataset(os.path.join(config['experimentFolder'], instrument, r'raw_netcdf\part' + part + '.nc'))
         ds = ds.sel(t=slice(tstart, tstop))
 
+        # check burstDuration
+        if config['burstDuration'] != 1800:
+            print('ADCP bursts other than 1800 are not implemented')
 
         # compute quality criteria
-        umag = np.sqrt(ds.v1**2+ds.v2**2+ds.v3**2)
+        crit_amp = config['qcADCPSettings']['ampTreshold']
         ma = np.logical_and(np.logical_and(ds.a1 > crit_amp, ds.a2 > crit_amp), ds.a3 > crit_amp)
+        crit_cor = config['qcADCPSettings']['corTreshold']
         mc = np.logical_and(np.logical_and(ds.c1 > crit_cor, ds.c2 > crit_cor), ds.c3 > crit_cor)
+        umag = np.sqrt(ds.v1 ** 2 + ds.v2 ** 2 + ds.v3 ** 2)
+        crit_v = config['qcADCPSettings']['uLim']
         mv = umag < crit_v
 
-        # if du larger than 4*std(u) then we consider it outlier and hence remove:
+        # if du larger than xx*std(u) then we consider it outlier and hence remove:
+        crit_outlier = config['qcADCPSettings']['outlierCrit']
         md1 = np.abs(ds.v1.diff('N')) < crit_outlier * ds.v1.std(dim='N')
         md2 = np.abs(ds.v2.diff('N')) < crit_outlier * ds.v2.std(dim='N')
         md3 = np.abs(ds.v3.diff('N')) < crit_outlier * ds.v3.std(dim='N')
         md = np.logical_and(np.logical_and(md1, md2), md3)
 
+        qc_maxfracnans = config['qcADCPSettings']['maxFracNans']
         for var in ['v1', 'v2', 'v3']:
             # mask bad samples, ignoring the correlation
             ds[var] = ds[var].where(ma).where(mv).where(md)  # .where(mc)
@@ -62,6 +58,7 @@ def qc_this_rawdatafile(instrument, heading, part):
 
         # interpolate nans in velocity data
         N = len(ds.N)
+        qc_maxgap = config['qcADCPSettings']['maxGap']
         for var in ['v1', 'v2', 'v3']:
             if len(ds.t) != 0:
                 ds[var] = ds[var].interpolate_na(
@@ -72,7 +69,7 @@ def qc_this_rawdatafile(instrument, heading, part):
             # and fill the gaps more than maxGap in length with the burst average
             ds[var] = ds[var].fillna(ds[var].mean(dim='N'))
 
-        # ADCP downward positioned instead of upward pos so therefore flip coordinate system
+        # ADCP downward positioned instead of upward pos so, therefore flip coordinate system
         ds['v2'] = -ds['v2']
         ds['v3'] = -ds['v3']
 
@@ -91,7 +88,7 @@ def qc_this_rawdatafile(instrument, heading, part):
         # correct for the air pressure fluctuations and drift in the instrument
         # by using the pressure of the standalone solo's to match the high water pressures
         # we loose the water level gradients
-        pres = xr.open_dataset(os.path.join(experimentFolder, r'waterlevel.nc'))
+        pres = xr.open_dataset(os.path.join(config['experimentFolder'], 'waterlevel.nc'))
 
         # half hour average pressure, on similar time-axis as ADV data
         presref = pres.p.interp_like(ds)
@@ -99,9 +96,9 @@ def qc_this_rawdatafile(instrument, heading, part):
         # correct the raw pressure signal by
         ds['pc'] = ds.p - ds.p.mean(dim='N') + presref
         ds['pc'].attrs = {'units': 'Pa', 'long_name': 'pressure',
-                          'comments': 'referenced to pressure L2C10SOLO'}
+                          'comments': 'referenced to pressure L2C10SOLO/L2C9OSSI'}
 
-        ds['eta'] = ds['pc'] / rho / g
+        ds['eta'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
         ds['eta'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic water level'}
 
         ds['d'] = ds.eta.mean(dim='N') - ds.zb
@@ -158,14 +155,13 @@ def qc_this_rawdatafile(instrument, heading, part):
                        'pc', 'p', 'v1', 'v2', 'v3', 'name'], errors='ignore')
 
         # generate file name
-        ncFilePath = os.path.join(experimentFolder, instrument, r'qc\{}.nc'.format(tstart_string))
+        ncFilePath = os.path.join(config['experimentFolder'], instrument, r'qc\{}.nc'.format(tstart_string))
 
         if len(ds.dropna(dim='t').t) > 0:
             continue
 
         if os.path.exists(ncFilePath):
             with xr.open_dataset(ncFilePath) as ds0:
-                #ds = xr.merge([ds0, ds], compat='override')
                 ds = xr.merge([ds0, ds])
 
         # write to file
@@ -177,14 +173,17 @@ def qc_this_rawdatafile(instrument, heading, part):
     return
 
 if __name__ == "__main__":
-    experimentFolder = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments'
 
-    instrument = 'L2C7ADCP'
-    heading = 78  # because we don't trust the internal compass, we measured this in-situ using gps
-    for part in ['1', '2', '3', '4']:
-        qc_this_rawdatafile(instrument, heading, part)
+    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
 
-    instrument = 'L4C1ADCP'
-    heading = 199  # because we don't trust the internal compass, we measured this in-situ using gps
-    for part in ['a1', 'b1', 'a3', 'b3','c3']:
-        qc_this_rawdatafile(instrument, heading, part)
+    if 'L2C7ADCP' in config['instruments']['ADCP']:
+        instrument = 'L2C7ADCP'
+        heading = 78  # because we don't trust the internal compass, we measured this in-situ using gps
+        for part in ['1', '2', '3', '4']:
+            qc_this_rawdatafile(instrument, heading, part, config)
+
+    if 'L4C1ADCP' in config['instruments']['ADCP']:
+        instrument = 'L4C1ADCP'
+        heading = 199  # because we don't trust the internal compass, we measured this in-situ using gps
+        for part in ['a1', 'b1', 'a3', 'b3','c3']:
+            qc_this_rawdatafile(instrument, heading, part, config)

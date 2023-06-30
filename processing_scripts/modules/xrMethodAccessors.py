@@ -1,19 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Dec  3 10:13:04 2021
-
-@author: marliesvanderl
-"""
-import sys
-sys.path.append(r'c:\Users\marliesvanderl\phd\analysis\scripts\private\modules')
-import pdb
 import xarray as xr
 import puv
 import numpy as np
 import pandas as pd
 from matplotlib import cm
-
-# import waveStatMethodAcessor
 
 @xr.register_dataset_accessor("puv")
 class WaveStatMethodAccessor:

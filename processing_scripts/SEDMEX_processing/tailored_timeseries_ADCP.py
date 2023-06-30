@@ -1,16 +1,16 @@
-import xarray as xr
-import numpy as np
 import glob
 import os
+import yaml
+from pathlib import Path
+import numpy as np
+import xarray as xr
 import xrMethodAccessors
 
-
-
-def tailor_this_dataset(instrumentName):
-    fileNames = glob.glob(os.path.join(experimentFolder, instrumentName, 'qc', '*.nc'))
+def tailor_this_dataset(instrument, config):
+    fileNames = glob.glob(os.path.join(config['experimentFolder'], instrument, 'qc', '*.nc'))
 
     # prepare the save directory and place a copy of the script in this file
-    ncOutDir = os.path.join(experimentFolder, instrumentName, 'tailored')
+    ncOutDir = os.path.join(config['experimentFolder'], instrument, 'tailored')
     if not os.path.isdir(ncOutDir):
         os.mkdir(ncOutDir)
 
@@ -62,10 +62,8 @@ def tailor_this_dataset(instrumentName):
         # extent the dataset with appropriate frequency axis
         ##########################################################################
         print('extending dataset with freq axis')
-        sf = ds.sf.values
-        powerStep = 7  # 9 for investigating the spectra 9 = 0.03Hz resolution
-        fresolution = np.round(sf * np.exp(-np.log(2) * powerStep), 5)
-        ndiscretetheta = 64
+        fresolution = config['tailoredWaveSettings']['fresolution']
+        ndiscretetheta = int(360/config['tailoredWaveSettings']['thetaresolution'])
         ds2 = xr.Dataset(
             data_vars={},
             coords={'t': ds.t,
@@ -97,7 +95,8 @@ def tailor_this_dataset(instrumentName):
         Sw = ds.puv.attenuation_factor('pressure', elev='elev', d='d')
         ds['vyp'] = Sw * vy
 
-        kwargs = {'fmin': 0.1, 'fmax': 1.5}
+        kwargs = {'fmin': config['tailoredWaveSettings']['fmin'],
+                  'fmax': config['tailoredWaveSettings']['fmax']}
         ds['Hm0'], ds['Tp'], ds['Tm01'], ds['Tm02'], ds['Tmm10'], ds['Tps'] = (
             ds.puv.compute_wave_params(var='vyp', **kwargs)
         )
@@ -115,8 +114,9 @@ def tailor_this_dataset(instrumentName):
         print('near bed orbital velocity computation')
 
         ds['fp'] = 1 / ds.Tp
-        ds['u_ss'] = ds.puv.band_pass_filter_ss(var='u_nb', freqband=[0.05, 1.5])
-        ds['v_ss'] = ds.puv.band_pass_filter_ss(var='v_nb', freqband=[0.05, 1.5])
+        ssBounds = [config['tailoredWaveSettings']['fmin'], config['tailoredWaveSettings']['fmax_ss']]
+        ds['u_ss'] = ds.puv.band_pass_filter_ss(var='u_nb', freqband=ssBounds)
+        ds['v_ss'] = ds.puv.band_pass_filter_ss(var='v_nb', freqband=ssBounds)
 
         # compute angle of main wave propagation through singular value decomposition
         ds['svdtheta'] = ds.puv.compute_SVD_angle(u='u_ss', v='v_ss')
@@ -148,7 +148,7 @@ def tailor_this_dataset(instrumentName):
              'comments': 'cartesian convention, from puv Method of maximum Entropy'}
         )
 
-        _, _, _, _, _, _, ds['puvdir'], ds['puv_dspr'] = ds.puv.compute_wave_params_from_S(var='S')
+        _, _, _, _, _, _, ds['puvdir'], ds['puv_dspr'] = ds.puv.compute_wave_params_from_S(var='S', **kwargs)
         ds['puvdir'].attrs = (
             {'units': 'deg', 'long_name': 'wave prop dir',
              'comments': 'cartesian convention, from puv Method of maximum Entropy'}
@@ -186,33 +186,46 @@ def tailor_this_dataset(instrumentName):
 
 
         # on the frequency range adapting to the peak period
-        ds['Sk'], ds['As'], ds['sig'] = ds.puv.compute_SkAs('ud')
+        ds['Sk'], ds['As'], ds['sig'] = ds.puv.compute_SkAs('ud', fixedBounds=False)
         ds['Sk'].attrs = {'units': 'm3/s3', 'long_name': 'skewness', 'comment': 'vel-based between 0.5Tp and 2Tp'}
         ds['As'].attrs = {'units': 'm3/s3', 'long_name': 'asymmetry', 'comment': 'vel-based between 0.5Tp and 2Tp'}
         ds['sig'].attrs = {'units': 'm/s', 'long_name': 'std(ud)', 'comment': 'vel-based between 0.5Tp and 2Tp'}
 
         # in the traditional freqband 0.05-1 Hz
+        shapeBounds0 = [config['tailoredWaveSettings']['fmin'], config['tailoredWaveSettings']['fmax0']]
         ds['Sk0'], ds['As0'], ds['sig0'] = (
-            ds.puv.compute_SkAs('ud', fixedBounds=True, bounds=[0.05, 1])
+            ds.puv.compute_SkAs('ud', fixedBounds=True, bounds=shapeBounds0)
         )
-        ds['Sk0'].attrs = {'units': 'm3/s3', 'long_name': 'skewness', 'comment': 'vel-based between 0.05 and 1 Hz'}
-        ds['As0'].attrs = {'units': 'm3/s3', 'long_name': 'asymmetry', 'comment': 'vel-based between 0.05 and 1 Hz'}
-        ds['sig0'].attrs = {'units': 'm/s', 'long_name': 'std(ud)', 'comment': 'vel-based between 0.05 and 1 Hz'}
+        ds['Sk0'].attrs = {'units': 'm3/s3', 'long_name': 'skewness',
+                           'comment': 'vel-based between {} and {} Hz'.format(shapeBounds0[0],
+                                                                                        shapeBounds0[1])}
+        ds['As0'].attrs = {'units': 'm3/s3', 'long_name': 'asymmetry',
+                           'comment': 'vel-based between {} and {} Hz'.format(shapeBounds0[0],
+                                                                                        shapeBounds0[1])}
+        ds['sig0'].attrs = {'units': 'm/s', 'long_name': 'std(ud)',
+                            'comment': 'vel-based between {} and {} Hz'.format(shapeBounds0[0],
+                                                                                        shapeBounds0[1])}
 
         # in the original freq range
         ds['Skp0'], ds['Asp0'], ds['sigp0'] = (
-            ds.puv.compute_SkAs('eta', fixedBounds=True, bounds=[0.05, 1])
+            ds.puv.compute_SkAs('eta', fixedBounds=True, bounds=shapeBounds0)
         )
-        ds['Skp0'].attrs = {'units': 'm3/s3', 'long_name': 'skewness', 'comment': 'pressure-based between 0.05 and 1 Hz'}
-        ds['Asp0'].attrs = {'units': 'm3/s3', 'long_name': 'asymmetry', 'comment': 'pressure-based between 0.05 and 1 Hz'}
-        ds['sigp0'].attrs = {'units': 'm/s', 'long_name': 'std(ud)', 'comment': 'pressure-based between 0.05 and 1 Hz'}
+        ds['Skp0'].attrs = {'units': 'm3', 'long_name': 'skewness',
+                            'comment': 'pressure-based between {} and {} Hz'.format(shapeBounds0[0],
+                                                                                        shapeBounds0[1])}
+        ds['Asp0'].attrs = {'units': 'm3', 'long_name': 'asymmetry',
+                            'comment': 'pressure-based between {} and {} Hz'.format(shapeBounds0[0],
+                                                                                        shapeBounds0[1])}
+        ds['sigp0'].attrs = {'units': 'm', 'long_name': 'std(ud)',
+                             'comment': 'pressure-based between {} and {} Hz'.format(shapeBounds0[0],
+                                                                                        shapeBounds0[1])}
 
         # in a band scaled with peak period
-        ds['Skp'], ds['Asp'], ds['sigp'] = ds.puv.compute_SkAs('eta')
+        ds['Skp'], ds['Asp'], ds['sigp'] = ds.puv.compute_SkAs('eta',fixedBounds=False)
 
-        ds['Skp'].attrs = {'units': 'm3/s3', 'long_name': 'skewness', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
-        ds['Asp'].attrs = {'units': 'm3/s3', 'long_name': 'asymmetry', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
-        ds['sigp'].attrs = {'units': 'm/s', 'long_name': 'std(ud)', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
+        ds['Skp'].attrs = {'units': 'm3', 'long_name': 'skewness', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
+        ds['Asp'].attrs = {'units': 'm3', 'long_name': 'asymmetry', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
+        ds['sigp'].attrs = {'units': 'm', 'long_name': 'std(ud)', 'comment': 'pressure-based between 0.5Tp and 2Tp'}
 
         ds['k'] = ds.puv.disper()
         ds['k'].attrs = {'units': 'm-1', 'long_name': 'k'}
@@ -233,7 +246,7 @@ def tailor_this_dataset(instrumentName):
 
 if __name__ == "__main__":
 
-    experimentFolder = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments'
-
-    for instrumentName in ['L4C1ADCP', 'L2C7ADCP']:
-        tailor_this_dataset(instrumentName)
+    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    
+    for instrument in config['instruments']['adcp']:
+        tailor_this_dataset(instrument, config)

@@ -1,32 +1,14 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Nov 24 13:36:11 2021
-
-@author: marliesvanderl
-"""
 import glob
 import os
+import yaml
+from pathlib import Path
 import xarray as xr
 import numpy as np
 import pandas as pd
 import puv
 
 
-# quality check calibration factors
-# velocity limits based on settings in the instrument
-qc = pd.DataFrame(
-    {
-     'uLim': [2.1, 2.1, 2.1, 2.1, 2.1, 1.5, 1.5, 2.1, 2.1, 2.1, 2.1, 2.1],  # modified to be 1.5 and not 0.6 for horizontal vectors, not saved to file yet! 10/12
-     'vLim': [2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1],
-     'wLim': [0.6, 0.6, 0.6, 0.6, 0.6, 1.5, 1.5, 0.6, 0.6, 0.6, 0.6, 0.6],
-     'corTreshold': 12*[50],
-     'ampTreshold': 5*[80] + 2*[40] + 2*[80] + 3*[100],  # horizontal vectors had lower returns than downwardlooking ones
-     'maxFracNans': 12*[0.05],
-     'maxGap': 12*[10],
-     'waterHeadMargin': 12*[0.05]
-      },
-    index=['L1C1VEC', 'L2C3VEC', 'L3C1VEC', 'L5C1VEC', 'L6C1VEC', 'L2C2VEC', 'L2C4VEC', 'L2C10VEC', 'L4C1VEC', 'L2C5SONTEK1', 'L2C5SONTEK2', 'L2C5SONTEK3']
-    )
+
 
 def hor2vert_vector_mapping(u, v, w):
     '''
@@ -42,29 +24,30 @@ def hor2vert_vector_mapping(u, v, w):
     u, v, w = mapMatrix @coords
     return u, v, w
 
-def resample_quality_check_replace_dataset(ds):
+def resample_quality_check_replace_dataset(ds, ds_presref, config):
     import xrMethodAccessors
 
     # we reshape the dataset to blocks of blockLength seconds.
     if 'SONTEK' in ds.name:
-        # we distribute the missing 60 seconds every half hour evenly over the three 10min blocks
-        ds = ds.burst.reduce_burst_length(3)
+        # the sontek measured in blocks of half hour. if we want analysis in another duration, we distribute the
+        # burst into blocks of data such that the missing 60 seconds every half hour get evenly distributed
+        # over the three 10min blocks
+        ndivide = int(1800 / config['burstDuration']['sontek'])
+        ds = ds.burst.reduce_burst_length(ndivide)
     else:
         # only the last of the 3 blocks contains 10 secs of missing data
-        ds = ds.burst.reshape_burst_length(600)
+        ds = ds.burst.reshape_burst_length(config['burstDuration']['vector'])
 
     # correct for the air pressure fluctuations and drift in the instrument
     # by using the pressure of the standalone solo's to match the high water pressures
-    # we loose the water level gradients
-    pres = xr.open_dataset(os.path.join(experimentFolder, 'waterlevel.nc'))
-
+    # Mind you: we loose the water level gradients over the cross-shore
     # half hour average pressure, on similar time-axis as ADV data
-    presref = pres.p.interp_like(ds)
+    presref = ds_presref.p.interp_like(ds)
 
     # correct the raw pressure signal by
     ds['pc'] = ds.p - ds.p.mean(dim='N') + presref
     ds['pc'].attrs = {'units': 'Pa', 'long_name': 'pressure',
-                      'comments': 'referenced to pressure L2C9OSSI'}
+                      'comments': 'referenced to pressure L2C10SOLO/L2C9OSSI'}
 
     # compute mean water level, water depth
     ds['zi'] = ds['zb'] + ds['h'] / 100
@@ -73,7 +56,7 @@ def resample_quality_check_replace_dataset(ds):
     ds['zip'] = ds['zb'] + ds['hpres'] / 100
     ds['zip'].attrs = {'units': 'm+NAP', 'long_name': 'position pressure sensor'}
 
-    ds['eta'] = ds['pc'] / rho / g
+    ds['eta'] = ds['pc'] / config['physicalConstans']['rho'] / config['physicalConstans']['g']
     ds['eta'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic water level'}
 
     ds['d'] = ds.eta.mean(dim='N') - ds.zb
@@ -84,33 +67,33 @@ def resample_quality_check_replace_dataset(ds):
     ds['elevp'].attrs = {'units': 'm ', 'long_name': 'height ptd above bed'}
 
     # if amplitude is too low, the probe was emerged
-    ma1 = ds.a1 > QC['ampTreshold']
-    ma2 = ds.a2 > QC['ampTreshold']
-    ma3 = ds.a3 > QC['ampTreshold']
+    ma1 = ds.a1 > config['qcADVSettings']['ampTreshold'][ds.name]
+    ma2 = ds.a2 > config['qcADVSettings']['ampTreshold'][ds.name]
+    ma3 = ds.a3 > config['qcADVSettings']['ampTreshold'][ds.name]
 
     # if correlation is outside confidence range
-    if QC['corTreshold'] == 'elgar':
+    if config['qcADVSettings']['corTreshold'] == 'elgar':
         # estimate correlation threshold, Elgar et al., 2005; pp. 1891
         sf = ds.sf.values
         if len(sf) > 0:
             sf = sf[0]
             criticalCorrelation = (0.3 + 0.4 * np.sqrt(sf / 25)) * 100
     else:
-        criticalCorrelation = QC['corTreshold']
+        criticalCorrelation = config['qcADVSettings']['corTreshold']
 
     mc1 = ds.cor1 > criticalCorrelation
     mc2 = ds.cor2 > criticalCorrelation
     mc3 = ds.cor3 > criticalCorrelation
 
     # if observation is outside of velocity range
-    mu1 = np.abs(ds.u) < QC['uLim']
-    mu2 = np.abs(ds.v) < QC['uLim']
-    mu3 = np.abs(ds.w) < QC['uLim']
+    mu1 = np.abs(ds.u) < config['qcADVSettings']['uLim'][ds.name]
+    mu2 = np.abs(ds.v) < config['qcADVSettings']['uLim'][ds.name]
+    mu3 = np.abs(ds.w) < config['qcADVSettings']['uLim'][ds.name]
 
-    # if du larger than 4*std(u) then we consider it outlier and hence remove:
-    md1 = np.abs(ds.u.diff('N')) < 3 * ds.u.std(dim='N')
-    md2 = np.abs(ds.v.diff('N')) < 3 * ds.v.std(dim='N')
-    md3 = np.abs(ds.w.diff('N')) < 3 * ds.w.std(dim='N')
+    # if du larger than outlierCrit*std(u) then we consider it outlier and hence remove:
+    md1 = np.abs(ds.u.diff('N')) < config['qcADVSettings']['outlierCrit'] * ds.u.std(dim='N')
+    md2 = np.abs(ds.v.diff('N')) < config['qcADVSettings']['outlierCrit'] * ds.v.std(dim='N')
+    md3 = np.abs(ds.w.diff('N')) < config['qcADVSettings']['outlierCrit'] * ds.w.std(dim='N')
 
     ds['mc'] = np.logical_and(np.logical_and(mc1, mc2), mc3)
     ds['mu'] = np.logical_and(np.logical_and(mu1, mu2), mu3)
@@ -121,7 +104,7 @@ def resample_quality_check_replace_dataset(ds):
     ds['md'].attrs = {'units': '-', 'long_name': 'mask unexpected jumps in signal'}
     ds['ma'].attrs = {'units': '-', 'long_name': 'mask amplitude'}
 
-    mp = np.abs(ds.p.diff('N')) < 4 * ds.p.std(dim='N')
+    mp = np.abs(ds.p.diff('N')) < config['qcADVSettings']['outlierCrit'] * ds.p.std(dim='N')
     mp = xr.concat([mp.isel(N=0), mp], dim="N")
 
     ds.coords['maskp'] = (('t', 'N'), mp.values)
@@ -138,7 +121,7 @@ def resample_quality_check_replace_dataset(ds):
     ds['eta'] = ds.eta.where(ds.maskp).where(ds.maskd)
 
     # drop bursts with too many nans (>maxFracNans) in the velocity data
-    ds2 = ds.where( np.isnan(ds.u).sum(dim='N') < QC['maxFracNans'] * len(ds.N)).dropna(dim='t', how='all')
+    ds2 = ds.where( np.isnan(ds.u).sum(dim='N') < config['qcADVSettings']['maxFracNans'] * len(ds.N)).dropna(dim='t', how='all')
     ds2['sf'] = ds['sf']
 
     if len(ds2.t) == 0:
@@ -150,7 +133,7 @@ def resample_quality_check_replace_dataset(ds):
         ds[var] = ds2[var].interpolate_na(
             dim='N',
             method='cubic',
-            max_gap=QC['maxGap'])
+            max_gap=config['qcADVSettings']['maxGap'])
 
         # and fill the gaps more than maxGap in length with the burst average
         ds2[var] = ds2[var].fillna(ds2[var].mean(dim='N'))
@@ -220,43 +203,26 @@ def resample_quality_check_replace_dataset(ds):
                   'voltage', 'pc'], errors='ignore')
 
     return ds
+
+
 if __name__ == "__main__":
-    experimentFolder = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments'
-    # experimentFolder = r'u:\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments'
-    folderinName = 'raw_netcdf'
-    folderoutName = 'qc'
-    rho = 1028
-    g = 9.8
 
-    instruments = [
-             'L1C1VEC',
-             'L2C3VEC',
-             'L3C1VEC',
-             'L5C1VEC',
-             'L6C1VEC',
-             'L2C2VEC',
-             'L2C4VEC',
-             'L2C10VEC',
-             'L4C1VEC',
-             'L2C5SONTEK1',
-             'L2C5SONTEK2',
-             'L2C5SONTEK3'
-            ]
+    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
 
-    for instrumentName in instruments:
+    # preload the reference waterlevel to which the pressure recordings are calibrated
+    fileZsRef = os.path.join(config['experimentFolder'], 'waterlevel.nc')
+    ds_presref = xr.open_dataset(fileZsRef)
+
+    for instrumentName in config['instruments']['adv']['vector'] + config['instruments']['adv']['sontek'] :
         print(instrumentName)
 
-        # extract the instrument specific quality criteria
-        QC = qc.loc[instrumentName]
-
-
         # find all raw data on file for this instrument
-        fileNames = glob.glob(os.path.join(experimentFolder, instrumentName, folderinName, '*.nc'))
+        fileNames = glob.glob(os.path.join(config['experimentFolder'], instrumentName, 'raw_netcdf', '*.nc'))
 
         # ensure the output folder exists
-        fold = os.path.join(experimentFolder, instrumentName, folderoutName)
-        if not os.path.isdir(fold):
-            os.mkdir(fold)
+        folderOut = os.path.join(config['experimentFolder'], instrumentName, 'qc')
+        if not os.path.isdir(folderOut):
+            os.mkdir(folderOut)
 
         # loop over all the raw data files
         for file in fileNames:
@@ -265,7 +231,7 @@ if __name__ == "__main__":
             with xr.open_dataset(file) as ds:
 
                 # do the actual work
-                ds = resample_quality_check_replace_dataset(ds)
+                ds = resample_quality_check_replace_dataset(ds, ds_presref, config)
 
                 # save to file
                 if len(ds.t) > 0:
@@ -284,7 +250,7 @@ if __name__ == "__main__":
                         ds_sel = ds.sel(t=date)
 
                         if len(ds.t) > 0:
-                            ncFilePath = os.path.join(fold, '{}_{}.nc'.format(ds.name, date))
+                            ncFilePath = os.path.join(folderOut, '{}_{}.nc'.format(ds.name, date))
 
                             # if there is already a file on the drive, merge the results
                             if os.path.exists(ncFilePath):

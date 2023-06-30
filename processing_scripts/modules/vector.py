@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 21 18:15:29 2021
-
-@author: marliesvanderl
-"""
 import glob
 import os
 import numpy as np
 import pandas as pd
 import xarray as xr
 import KNMI_readers as readers
-import pdb
 
 class Vector(object):
     '''

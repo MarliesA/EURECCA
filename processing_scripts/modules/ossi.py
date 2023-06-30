@@ -55,7 +55,7 @@ def ossi_data_reader(path):
     
     return ossi.set_index('t')
 
-def Ossi(instrumentName,experimentFolder,isxy,jasave = False):
+def Ossi(instrumentName,experimentFolder,isxy,sf, jasave = False):
            
     path = experimentFolder +  '//' + instrumentName + r'\raw' + '//'       
     dfp = ossi_data_reader(path)
@@ -78,7 +78,7 @@ def Ossi(instrumentName,experimentFolder,isxy,jasave = False):
        'epsg':28992,
        'x':isxy[instrumentName]['xRD'],
        'y':isxy[instrumentName]['yRD'],   
-       'sf':10,
+       'sf':sf,
        'time zone':'UTC+2',
        'coordinate type':'XYZ',
        'summary': 'SEDMEX field campaign',
