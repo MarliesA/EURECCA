@@ -4,7 +4,7 @@ from pathlib import Path
 import xarray as xr
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+from sedmex_info_loaders import get_githash
 
 def cast_to_blocks(ds0, burstDuration):
 
@@ -107,6 +107,10 @@ if __name__ == "__main__":
         if not os.path.isdir(folderOut):
             os.mkdir(folderOut)
         ncFilePath = os.path.join(folderOut, '{}.nc'.format(instr))
+
+        # add script version information
+        ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+        ds.attrs['git hash'] = get_githash()
 
         comp = dict(zlib=True, complevel=5)
         ds.encoding = {var: comp for var in ds.data_vars}

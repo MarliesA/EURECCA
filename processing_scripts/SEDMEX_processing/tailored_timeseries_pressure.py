@@ -6,6 +6,7 @@ import xarray as xr
 import numpy as np
 from datetime import datetime
 import puv
+from sedmex_info_loaders import get_githash
 import xrMethodAccessors
 
 def compute_waves(instr, config):
@@ -101,6 +102,10 @@ def compute_waves(instr, config):
         if not os.path.isdir(fold):
             os.mkdir(fold)
         ncFilePath = os.path.join(fold, '{}.nc'.format(instr))
+
+        # add script version information
+        ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+        ds.attrs['git hash'] = get_githash()
 
         # if nothing else, at least specify lossless zlib compression
         comp = dict(zlib=True, complevel=5)

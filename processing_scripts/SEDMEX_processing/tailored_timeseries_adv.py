@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Dec  8 16:28:24 2021
-
-@author: marliesvanderl
-"""
-
-import xarray as xr
-import numpy as np
 import glob
 import os
 import yaml
@@ -15,6 +6,7 @@ import numpy as np
 import xarray as xr
 from datetime import datetime
 import puv
+from sedmex_info_loaders import get_githash
 import xrMethodAccessors
 
 def compute_waves(instrument, config):
@@ -308,6 +300,10 @@ def compute_waves(instrument, config):
 
             # specify compression for all the variables to reduce file size
             ds.attrs['construction datetime'] = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+
+            # add script version information
+            ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+            ds.attrs['git hash'] = get_githash()
 
             comp = dict(zlib=True, complevel=5)
             ds.encoding = {var: comp for var in ds.data_vars}

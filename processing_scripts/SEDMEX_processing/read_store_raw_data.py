@@ -12,7 +12,7 @@ from solo import Solo
 from ossi import Ossi
 from profiler import Profiler
 import sontek
-from sedmex_info_loaders import load_instrument_information, add_positioning_info
+from sedmex_info_loaders import load_instrument_information, add_positioning_info, get_githash
 
 def load_solo_data(config):
 
@@ -45,11 +45,15 @@ def load_solo_data(config):
         ds = xr.merge(dsList)
         ds.attrs = dsList[0].attrs
 
-        ds = add_positioning_info(ds, instrumentName, conf['experimentFolder'])
+        ds = add_positioning_info(ds, instrumentName, config['experimentFolder'])
 
-        ncOutDir = os.path.join(conf['experimentFolder'], instrumentName, 'raw_netcdf')
+        ncOutDir = os.path.join(config['experimentFolder'], instrumentName, 'raw_netcdf')
         if not os.path.isdir(ncOutDir):
             os.mkdir(ncOutDir)
+
+        # add script version information
+        ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+        ds.attrs['git hash'] = get_githash()
 
         # if nothing else, at least specify lossless zlib compression
         comp = dict(zlib=True, complevel=5)
@@ -77,6 +81,10 @@ def load_ossi_data(config):
         if not os.path.isdir(fold):
             os.mkdir(fold)
         ncFilePath = os.path.join(fold, '{}.nc'.format(ds.name))
+
+        # add script version information
+        ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+        ds.attrs['git hash'] = get_githash()
 
         # if nothing else, at least specify lossless zlib compression
         comp = dict(zlib=True, complevel=5)
@@ -141,8 +149,11 @@ def vector_read_write_to_netcdf(instrumentName, experimentFolder, dataPath, isxy
             'contact person': 'Marlies van der Lugt',
             'emailadres': 'm.a.vanderlugt@tudelft.nl',
             'construction datetime': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)"),
-            'version': 'v1',
             'version comments': 'constructed with xarray'}
+
+        # add script version information
+        ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+        ds.attrs['git hash'] = get_githash()
 
         # specify compression for all the variables to reduce file size
         # if nothing else, at least specify lossless zlib compression
@@ -272,8 +283,11 @@ def load_sontek_data(instrumentName, config):
                 'contact person': 'Marlies van der Lugt',
                 'emailadres': 'm.a.vanderlugt@tudelft.nl',
                 'construction datetime': datetime.now().strftime("%d-%b-%Y (%H:%M:%S)"),
-                'version': 'v1',
                 'version comments': 'constructed with xarray. '}
+
+            # add script version information
+            ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+            ds.attrs['git hash'] = get_githash()
 
             # specify compression for all the variables to reduce file size
             comp = dict(zlib=True, complevel=5)
@@ -312,8 +326,11 @@ def load_ADCP_data(config):
                         'summary': 'SEDMEX field campaign, part ' + i,
                         'contact person': 'Marlies van der Lugt',
                         'emailadres': 'm.a.vanderlugt@tudelft.nl',
-                        'version': 'v1',
                         'version comments': 'constructed with xarray'}
+
+            # add script version information
+            ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+            ds.attrs['git hash'] = get_githash()
 
             # specify compression for all the variables to reduce file size
             comp = dict(zlib=True, complevel=5)
@@ -356,8 +373,11 @@ def load_ADCP_data(config):
                         'summary': 'SEDMEX field campaign, part ' + i,
                         'contact person': 'Marlies van der Lugt',
                         'emailadres': 'm.a.vanderlugt@tudelft.nl',
-                        'version': 'v1',
                         'version comments': 'constructed with xarray'}
+
+            # add script version information
+            ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+            ds.attrs['git hash'] = get_githash()
 
             # specify compression for all the variables to reduce file size
             comp = dict(zlib=True, complevel=5)

@@ -3,6 +3,7 @@ import yaml
 from pathlib import Path
 import numpy as np
 import xarray as xr
+from sedmex_info_loaders import get_githash
 
 def cast_to_blocks(ds, sf, burstDuration):
 
@@ -93,6 +94,10 @@ if __name__ == "__main__":
         if not os.path.isdir(outFolder):
             os.mkdir(outFolder)
         ncFilePath = os.path.join(outFolder, '{}.nc'.format(instr))
+
+        # add script version information
+        ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+        ds.attrs['git hash'] = get_githash()
 
         # if nothing else, at least specify lossless zlib compression
         comp = dict(zlib=True, complevel=5)

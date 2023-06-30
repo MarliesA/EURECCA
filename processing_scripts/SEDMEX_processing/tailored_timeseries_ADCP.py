@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import xarray as xr
 import xrMethodAccessors
+from sedmex_info_loaders import get_githash
 
 def tailor_this_dataset(instrument, config):
     fileNames = glob.glob(os.path.join(config['experimentFolder'], instrument, 'qc', '*.nc'))
@@ -240,6 +241,10 @@ def tailor_this_dataset(instrument, config):
         ds['nAs'].attrs = {'units': '-', 'long_name': 'near-bed orbital velocity asymmetry'}
         ds['nSk'] = ds.Sk / ds.sig ** 3
         ds['nSk'].attrs = {'units': '-', 'long_name': 'near-bed orbital velocity skewness'}
+
+        # add script version information
+        ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+        ds.attrs['git hash'] = get_githash()
 
         # specify compression for all the variables to reduce file size
         comp = dict(zlib=True, complevel=5)

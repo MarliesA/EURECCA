@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import puv
+from sedmex_info_loaders import get_githash
 
 def qc_this_rawdatafile(instrument, heading, part, config):
     ds = xr.open_dataset(os.path.join(config['experimentFolder'], instrument, r'raw_netcdf\part' + part + '.nc'))
@@ -163,6 +164,10 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         if os.path.exists(ncFilePath):
             with xr.open_dataset(ncFilePath) as ds0:
                 ds = xr.merge([ds0, ds])
+
+        # add script version information
+        ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+        ds.attrs['git hash'] = get_githash()
 
         # write to file
         # specify compression for all the variables to reduce file size

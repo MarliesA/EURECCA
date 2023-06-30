@@ -110,14 +110,14 @@ qcADVSettings:
     outlierCrit: 4
 qcADCPSettings:
     ampTreshold: 100
-    corTreshold: 30
+    corTreshold: 30        # we should use 50 percent but then we miss all information near the bed
     uLim: 0.9
     outlierCrit: 3
     maxFracNans: 0.05      # max % outliers for valid timeseries
     maxGap: 8              # max no. consecutive nans in timeseries  
 tailoredWaveSettings:
     fresolution: 0.02      # Hz
-    thetaresolution: 4     # deg
+    thetaresolution: 5     # deg
     fmin: 0.05
     fmax: 1.5
     fmax_ss: 8

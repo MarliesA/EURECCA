@@ -6,6 +6,7 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 import puv
+from sedmex_info_loaders import get_githash
 
 
 
@@ -258,6 +259,10 @@ if __name__ == "__main__":
                                 ds_merge = xr.merge([nc_onfile, ds_sel])
                             else:
                                 ds_merge = ds_sel
+
+                            # add script version information
+                            ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+                            ds.attrs['git hash'] = get_githash()
 
                             # write to file
                             # specify compression for all the variables to reduce file size
