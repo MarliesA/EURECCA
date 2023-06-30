@@ -37,11 +37,11 @@ beachOrientation = [
 for instrumentName, beachOri in zip(instruments, beachOrientation):
 
     # find all files that need to be processed
-    fileNames = glob.glob(os.path.join(experimentFolder, instrumentName, 'QC_230505', '*.nc'))
+    fileNames = glob.glob(os.path.join(experimentFolder, instrumentName, 'qc', '*.nc'))
     print(instrumentName)
 
     # prepare the save directory and place a copy of the script in this file
-    ncOutDir = os.path.join(experimentFolder, instrumentName, 'tailored_230505')
+    ncOutDir = os.path.join(experimentFolder, instrumentName, 'tailored')
     if not os.path.isdir(ncOutDir):
         os.mkdir(ncOutDir)
 

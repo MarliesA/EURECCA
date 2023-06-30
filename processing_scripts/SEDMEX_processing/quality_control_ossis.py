@@ -99,9 +99,9 @@ if __name__ == "__main__":
         ds2.attrs['summary'] = 'SEDMEX field campaign, pressure corrected for air pressure. There are inconsistencies between de mean pressure measured with ossis and solos.'
 
         # saving to file
-        if not os.path.isdir(experimentFolder + '//' +  instr + r'\QC'):
-            os.mkdir(experimentFolder + '//' +  instr + r'\QC' )
-        ncFilePath = experimentFolder + '//' +  instr + r'\QC\{}.nc'.format(instr)
+        if not os.path.isdir(experimentFolder + '//' +  instr + r'\qc'):
+            os.mkdir(experimentFolder + '//' +  instr + r'\qc' )
+        ncFilePath = experimentFolder + '//' +  instr + r'\qc\{}.nc'.format(instr)
 
         # if nothing else, at least specify lossless zlib compression
         comp = dict(zlib=True, complevel=5)

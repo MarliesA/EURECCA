@@ -123,9 +123,9 @@ if __name__ == "__main__":
         ds.attrs['summary'] = 'SEDMEX field campaign, pressure corrected for air pressure and quality checked'
         ds['name'] = instr
 
-        if not os.path.isdir(experimentFolder + '//' + instr + r'\QC'):
-            os.mkdir(experimentFolder + '//' + instr + r'\QC' )
-        ncFilePath = experimentFolder + '//' + instr + r'\QC\{}.nc'.format(instr)
+        if not os.path.isdir(experimentFolder + '//' + instr + r'\qc'):
+            os.mkdir(experimentFolder + '//' + instr + r'\qc' )
+        ncFilePath = experimentFolder + '//' + instr + r'\qc\{}.nc'.format(instr)
 
         comp = dict(zlib=True, complevel=5)
         ds.encoding = {var: comp for var in ds.data_vars}
