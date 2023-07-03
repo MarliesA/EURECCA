@@ -116,18 +116,13 @@ class Profiler(object):
              
         self.hdr = myvars
         self.nMeas = float(myvars['Number of measurements'])
-        try:
-            self.startTime = pd.to_datetime(myvars['Time of first measurement'], 
-                                            format = '%d-%m-%Y %H:%M:%S') 
-        except:
-            self.startTime = pd.to_datetime(myvars['Time of first measurement'], 
-                                            format = '%d/%m/%Y %H:%M:%S')  
-        try:                
-            self.stopTime = pd.to_datetime(myvars['Time of last measurement'], 
-                                           format = '%d-%m-%Y %H:%M:%S') 
-        except:
-            self.stopTime = pd.to_datetime(myvars['Time of last measurement'], 
-                                           format = '%d/%m/%Y %H:%M:%S') 
+
+        self.startTime = pd.to_datetime(myvars['Time of first measurement'],
+                                            format = 'mixed', dayfirst=True)
+
+        self.stopTime = pd.to_datetime(myvars['Time of last measurement'],
+                                           format = 'mixed', dayfirst=True)
+
             
         self.samplingFrequency = float(myvars['Sampling rate'].split()[0])
         self.coordinateSystem = myvars['Coordinate system']
