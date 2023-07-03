@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
         #fix offset with respect to the solo at L2C10:
         #these were identified manually by finding the average discrepenacy over all meas
-        rhog = config['physicalConstans']['rho']*config['physicalConstans']['g']
+        rhog = config['physicalConstants']['rho']*config['physicalConstants']['g']
         if instr=='L2C9OSSI':
             ds2['p'] = p3 + ds2.zi*rhog + rhog*0.58
         elif instr=='L2C8OSSI':

@@ -99,7 +99,7 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ds['pc'].attrs = {'units': 'Pa', 'long_name': 'pressure',
                           'comments': 'referenced to pressure L2C10SOLO/L2C9OSSI'}
 
-        ds['eta'] = ds['pc'] / config['physicalConstans']['rho'] / config['physicalConstans']['g']
+        ds['eta'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
         ds['eta'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic water level'}
 
         ds['d'] = ds.eta.mean(dim='N') - ds.zb

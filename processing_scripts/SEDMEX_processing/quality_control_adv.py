@@ -57,7 +57,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     ds['zip'] = ds['zb'] + ds['hpres'] / 100
     ds['zip'].attrs = {'units': 'm+NAP', 'long_name': 'position pressure sensor'}
 
-    ds['eta'] = ds['pc'] / config['physicalConstans']['rho'] / config['physicalConstans']['g']
+    ds['eta'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
     ds['eta'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic water level'}
 
     ds['d'] = ds.eta.mean(dim='N') - ds.zb

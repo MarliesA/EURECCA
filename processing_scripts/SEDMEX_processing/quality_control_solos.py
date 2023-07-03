@@ -88,7 +88,7 @@ if __name__ == "__main__":
         p2 = ds0.p - pair
         p_dry = p2.resample({'t': '15T'}, loffset='15T').mean().sel({'t': pd.to_datetime(reft[instr])})
         p3 = p2 - p_dry.interp_like(ds0.p, method='linear').bfill(dim='t').ffill(dim='t')
-        ds0['p'] = p3 + ds0.zi*config['physicalConstans']['rho']*config['physicalConstans']['g']
+        ds0['p'] = p3 + ds0.zi*config['physicalConstants']['rho']*config['physicalConstants']['g']
 
         ds = cast_to_blocks(ds0, burstDuration=config['burstDuration']['solo'])
         ds['sf'] = config['samplingFrequency']['ossi']
