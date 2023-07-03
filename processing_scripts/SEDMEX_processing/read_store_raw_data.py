@@ -409,7 +409,7 @@ if __name__ == "__main__":
     #load_vector_data(config)
 
     # sontek data
-    load_sontek_data(config)
+    #load_sontek_data(config)
 
     # adcp data
     load_ADCP_data(config)

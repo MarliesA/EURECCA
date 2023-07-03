@@ -115,6 +115,15 @@ qcADCPSettings:
     outlierCrit: 3
     maxFracNans: 0.05      # max % outliers for valid timeseries
     maxGap: 8              # max no. consecutive nans in timeseries  
+qcOSSISettings:
+    zsOffset:
+        L2C9OSSI: 0.58
+        L2C8OSSI: 0.31 
+        L2C6OSSI: 0.30
+        L1C2OSSI: 0.55
+        L4C3OSSI: 0.38
+        L5C2OSSI: 0.44
+        L6C2OSSI: 0.47     
 tailoredWaveSettings:
     fresolution: 0.02      # Hz
     thetaresolution: 5     # deg

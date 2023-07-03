@@ -69,17 +69,14 @@ if __name__ == "__main__":
         pair = dsCtd.p.interp_like(ds2)
         p3 = ds2.p - ds2.p.min() - pair + pair.min()
 
-        #fix offset with respect to the solo at L2C10:
-        #these were identified manually by finding the average discrepenacy over all meas
+        # reference pressure to correct height based on instrument height and identified instrument offset
         rhog = config['physicalConstants']['rho']*config['physicalConstants']['g']
-        if instr=='L2C9OSSI':
-            ds2['p'] = p3 + ds2.zi*rhog + rhog*0.58
-        elif instr=='L2C8OSSI':
-            ds2['p'] = p3 + ds2.zi*rhog + rhog*0.31
-        elif instr=='L2C6OSSI':
-            ds2['p'] = p3 + ds2.zi*rhog + rhog*0.30
+
+        if instr in config['qcOSSISettings']['zsOffset']:
+            ds2['p'] = p3 + rhog * (ds2.zi + config['qcOSSISettings']['zsOffset'][instr])
         else:
-            ds2['p'] = p3 + ds2.zi*rhog
+            ds2['p'] = p3 + rhog * ds2.zi
+
 
         ds2['p'].attrs = {'units': 'Pa +NAP', 'long_name': 'pressure', 'comments': 'corrected for drift air pressure'}
         ds2['h'].attrs = {'units': 'm', 'long_name': 'instrument height above bed', 'comment': 'neg down'}
