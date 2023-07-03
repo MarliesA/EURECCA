@@ -46,7 +46,11 @@ def compute_waves(instrument, config):
             # extent the dataset with appropriate frequency axis
             ##########################################################################
             print('extending dataset with freq axis')
-            fresolution = config['tailoredWaveSettings']['fresolution']
+            if 'SONTEK' in instrument:
+                fresolution = config['tailoredWaveSettings']['fresolution']['sontek']
+            elif 'vector' in instrument:
+                fresolution = config['tailoredWaveSettings']['fresolution']['vector']
+
             ndiscretetheta = int(360/config['tailoredWaveSettings']['thetaresolution'])
             ds2 = xr.Dataset(
                 data_vars={},
@@ -69,6 +73,9 @@ def compute_waves(instrument, config):
             ##########################################################################
             # statistics computed from pressure
             ##########################################################################
+            kwargs = {'fmin': config['tailoredWaveSettings']['fmin'],
+                      'fmax': config['tailoredWaveSettings']['fmax']}
+
             if not 'SONTEK' in instrument:
                 print('statistics from pressure')
                 _,vy   = ds.puv.spectrum_simple('eta', fresolution=fresolution)
@@ -81,9 +88,6 @@ def compute_waves(instrument, config):
                 # attenuation corrected spectra
                 Sw = ds.puv.attenuation_factor('pressure', elev='elevp', d='d')
                 ds['vyp'] = Sw * vy
-
-                kwargs = {'fmin': config['tailoredWaveSettings']['fmin'],
-                          'fmax': config['tailoredWaveSettings']['fmax']}
 
                 ds['Hm0'], ds['Tp'], ds['Tm01'], ds['Tm02'], ds['Tmm10'], ds['Tps'] = (
                     ds.puv.compute_wave_params(var='vyp', **kwargs)
@@ -211,7 +215,7 @@ def compute_waves(instrument, config):
             ds['sig'].attrs = {'units': 'm/s', 'long_name': 'std(ud)', 'comment': 'vel-based between 0.5Tp and 2Tp'}
 
             # in the traditional freqband 0.05-1 Hz
-            shapeBounds0 = [config['tailoredWaveSettings']['fmin'], config['tailoredWaveSettings']['fmax0']]
+            shapeBounds0 = [config['tailoredWaveSettings']['fmin'], config['tailoredWaveSettings']['fmax_skas0']]
             ds['Sk0'], ds['As0'], ds['sig0'] = (
                 ds.puv.compute_SkAs('ud', fixedBounds=True, bounds=shapeBounds0)
             )
@@ -318,7 +322,14 @@ if __name__ == "__main__":
 
     config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
 
-    for instrument in config['instruments']['adv']['vector']+config['instruments']['adv']['sontek']:
+    # loop over all sonteks and adv's
+    allVectors = []
+    if not config['instruments']['adv']['vector'] == None:
+        allVectors += config['instruments']['adv']['vector']
+    if not config['instruments']['adv']['sontek'] == None:
+        allVectors += config['instruments']['adv']['sontek']
+
+    for instrument in allVectors:
 
         compute_waves(instrument, config)
 
