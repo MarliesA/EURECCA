@@ -55,6 +55,10 @@ def load_positioning_info(experimentFolder, instrumentName):
                                     'h': zih[instrumentName].dropna().astype(float),
                                     'hpres': zih[presName].dropna().astype(float),
                                     'io': io[instrumentName].astype(float)})
+    elif 'SONTEK' in instrumentName:
+        positioning = pd.DataFrame({'zb': zb[instrumentName].dropna().astype(float),
+                                    'h': zih[instrumentName].dropna().astype(float),
+                                    'io': io[instrumentName].astype(float)})
     else:
         positioning = pd.DataFrame({'zb': zb[instrumentName].dropna().astype(float),
                                     'h': zih[instrumentName].dropna().astype(float)})
@@ -89,6 +93,7 @@ def add_positioning_info(ds, instrumentName, experimentFolder):
     ds['h'].attrs = {'units': 'cm', 'long_name': 'instrument height above bed, neg down'}
     if 'VEC' in instrumentName:
         ds['hpres'].attrs = {'units': 'cm', 'long_name': 'pressure sensor height above bed, neg down'}
+    if 'VEC' in instrumentName or 'ADCP' in instrumentName or 'SONTEK' in instrumentName:
         ds['io'].attrs = {'units': 'deg', 'long_name': 'angle x-dir with north clockwise'}
 
     return ds
@@ -99,6 +104,7 @@ def load_instrument_information(experimentFolder):
                          sheet_name='main',
                          header=1,
                          usecols='A:D').T
+
     isxy.columns = isxy.iloc[0]
     isxy.drop(isxy.iloc[0].name, inplace=True)
     isxy.columns = [s.strip() for s in isxy.columns]
