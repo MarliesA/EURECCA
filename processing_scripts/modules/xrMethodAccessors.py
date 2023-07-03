@@ -361,11 +361,13 @@ class WaveStatMethodAccessor:
             return (('t', 'f', 'theta'), np.nan*np.ones([len(ds.t), len(ds.f), len(ds.theta)]))
 
         fresolution = ds.f.values[1] - ds.f.values[0]
+        thetaresolution = ds.theta.values[1] - ds.theta.values[0]
         ufunc = lambda eta,u,v,d,zi,zb: puv.wave_MEMpuv(
                     eta,u,v,d,
                     zi,zb,
                     ds.sf.values,
                     fresolution = fresolution,
+                    ntheta = len(ds.theta),
                     maxiter = 20,
                     **kwargs)
                    
