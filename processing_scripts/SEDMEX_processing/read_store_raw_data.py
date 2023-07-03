@@ -32,22 +32,22 @@ def load_solo_data(config):
                       '20211021//raw//202438_20211021_1515_data.txt']
 
     }
-    for instrumentName in config['instruments']['solo']:
-        print(instrumentName)
+    for instrument in config['instruments']['solo']:
+        print(instrument)
 
-        dataFiles = allSoloDataFiles[instrumentName]
+        dataFiles = allSoloDataFiles[instrument]
 
         dsList = []
         for file in dataFiles:
             dsList.append(
-                Solo(instrumentName, config['experimentFolder'], file, isxy, sf=config['samplingFrequency']['solo'], jasave=False))
+                Solo(instrument, config['experimentFolder'], file, isxy, sf=config['samplingFrequency']['solo'], jasave=False))
 
         ds = xr.merge(dsList)
         ds.attrs = dsList[0].attrs
 
-        ds = add_positioning_info(ds, instrumentName, config['experimentFolder'])
+        ds = add_positioning_info(ds, instrument, config['experimentFolder'])
 
-        ncOutDir = os.path.join(config['experimentFolder'], instrumentName, 'raw_netcdf')
+        ncOutDir = os.path.join(config['experimentFolder'], instrument, 'raw_netcdf')
         if not os.path.isdir(ncOutDir):
             os.mkdir(ncOutDir)
 
@@ -61,7 +61,7 @@ def load_solo_data(config):
         for coord in list(ds.coords.keys()):
             ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
-        ds.to_netcdf(os.path.join(ncOutDir, instrumentName + '.nc'), encoding = ds.encoding)
+        ds.to_netcdf(os.path.join(ncOutDir, instrument + '.nc'), encoding = ds.encoding)
 
     return
 
@@ -95,12 +95,12 @@ def load_ossi_data(config):
         ds.to_netcdf(ncFilePath, encoding=ds.encoding)
 
     return
-def vector_read_write_to_netcdf(instrumentName, experimentFolder, dataPath, isxy, tstart=None, tstop=None):
+def vector_read_write_to_netcdf(instrument, experimentFolder, dataPath, isxy, tstart=None, tstop=None):
     '''
     Reads the raw data collected by a Nortek ADV into an xarray dataset. The function reads maximum of 1 day of data
     at a time. If the deployment was longer than one day, it splits the reading operation into several reading
     tasks and merges the result later.
-    :param instrumentName:
+    :param instrument:
     :param experimentFolder: root folder of the SEDMEX experiment
     :param dataPath: name of the raw data subfolder
     :param isxy: dataframe including the coordinates of the instrument and its serial number
@@ -111,8 +111,8 @@ def vector_read_write_to_netcdf(instrumentName, experimentFolder, dataPath, isxy
 
     # first check whether there is actually data on the raw data files in the desired time window
     vec = Vector(
-        name=instrumentName,
-        dataFolder=os.path.join(experimentFolder, instrumentName, dataPath),
+        name=instrument,
+        dataFolder=os.path.join(experimentFolder, instrument, dataPath),
         tstart=tstart,
         tstop=tstop)
 
@@ -132,17 +132,17 @@ def vector_read_write_to_netcdf(instrumentName, experimentFolder, dataPath, isxy
         # class instantiation and we can easily write it to netCDF
         ds = vec.ds
 
-        ds = add_positioning_info(ds, instrumentName, experimentFolder)
+        ds = add_positioning_info(ds, instrument, experimentFolder)
 
         # add global attribute metadata
         ds.attrs = {
             'Conventions': 'CF-1.6',
-            'name': '{}'.format(instrumentName),
-            'instrument': '{}'.format(instrumentName),
-            'instrument serial number': '{}'.format(isxy[instrumentName]['serial number']),
+            'name': '{}'.format(instrument),
+            'instrument': '{}'.format(instrument),
+            'instrument serial number': '{}'.format(isxy[instrument]['serial number']),
             'epsg': 28992,
-            'x': isxy[instrumentName]['xRD'],
-            'y': isxy[instrumentName]['yRD'],
+            'x': isxy[instrument]['xRD'],
+            'y': isxy[instrument]['yRD'],
             'time zone': 'UTC+2',
             'coordinate type': 'XYZ',
             'summary': 'SEDMEX field campaign',
@@ -163,7 +163,7 @@ def vector_read_write_to_netcdf(instrumentName, experimentFolder, dataPath, isxy
             ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
         # save to netCDF
-        fold = os.path.join(experimentFolder, instrumentName, 'raw_netcdf')
+        fold = os.path.join(experimentFolder, instrument, 'raw_netcdf')
         if not os.path.isdir(fold):
             os.mkdir(fold)
         ncFilePath = os.path.join(fold, '{}_{}.nc'.format(
@@ -177,7 +177,7 @@ def vector_read_write_to_netcdf(instrumentName, experimentFolder, dataPath, isxy
         blockStartTimes = pd.date_range(vec.tstart.floor('D'), vec.tstop.ceil('D'), freq='1D')
         for blockStartTime in blockStartTimes:
             vector_read_write_to_netcdf(
-                instrumentName, experimentFolder, dataPath,
+                instrument, experimentFolder, dataPath,
                 isxy=isxy,
                 tstart=blockStartTime,
                 tstop=blockStartTime + np.timedelta64(1, 'D'))
@@ -226,7 +226,7 @@ def load_vector_data(config):
     return
 
 
-def load_sontek_data(instrumentName, config):
+def load_sontek_data(config):
     '''
     wrapper function for read_raw_data_file that reads all raw data files in folder
     :param infolder: path to raw data folder
@@ -259,7 +259,7 @@ def load_sontek_data(instrumentName, config):
 
             ds = sontek.cast_to_blocks_in_xarray(df, sf=config['samplingFrequency']['sontek'], blockWidth=1740)
 
-            ds = add_positioning_info(ds, instrumentName, config['experimentFolder'])
+            ds = add_positioning_info(ds, instrument, config['experimentFolder'])
 
             # add sampling frequency as variable
             ds['sf'] = config['samplingFrequency']['sontek']
@@ -268,12 +268,12 @@ def load_sontek_data(instrumentName, config):
             # add global attribute metadata
             ds.attrs = {
                 'Conventions': 'CF-1.6',
-                'name': '{}'.format(instrumentName),
-                'instrument': '{}'.format(instrumentName),
-                'instrument serial number': '{}'.format(isxy[instrumentName]['serial number']),
+                'name': '{}'.format(instrument),
+                'instrument': '{}'.format(instrument),
+                'instrument serial number': '{}'.format(isxy[instrument]['serial number']),
                 'epsg': 28992,
-                'x': isxy[instrumentName]['xRD'],
-                'y': isxy[instrumentName]['yRD'],
+                'x': isxy[instrument]['xRD'],
+                'y': isxy[instrument]['yRD'],
                 'time zone': 'UTC+2',
                 'coordinate type': 'XYZ',
                 'summary': 'SEDMEX field campaign. Instrument is known to contain some internal clock drift. \
@@ -400,13 +400,13 @@ if __name__ == "__main__":
     config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
 
     # SOLO data
-    load_solo_data(config)
+    #load_solo_data(config)
 
     # ossi data
-    load_ossi_data(config)
+    #load_ossi_data(config)
 
     # vector data
-    load_vector_data(config)
+    #load_vector_data(config)
 
     # sontek data
     load_sontek_data(config)

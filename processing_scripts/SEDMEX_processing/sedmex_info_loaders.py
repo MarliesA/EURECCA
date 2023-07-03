@@ -73,19 +73,17 @@ def add_positioning_info(ds, instrumentName, experimentFolder):
 
     positioning = load_positioning_info(experimentFolder, instrumentName)
 
+    # interpolate missing values
     pos = xr.Dataset.from_dataframe(positioning)
     pos = pos.rename({'index': 't'})
     pos = pos.interpolate_na(dim='t', method='nearest', fill_value="extrapolate")
 
     # slice only the section that we have observations on
-    pos = pos.resample({'t': '1H'}).interpolate('nearest')
-    pos = pos.sel(t=slice(ds.t.min(), ds.t.max().dt.ceil(freq='1H')))
+    pos = pos.resample({'t': '30T'}).interpolate('nearest')
+    pos = pos.sel(t=slice(ds.t.min().dt.floor(freq='1H'), ds.t.max().dt.ceil(freq='1H')))
 
     # bring to same time axis as observations
-    pos = pos.resample({'t': '1800S'}).interpolate('nearest')
-    pos = pos.interpolate_na(dim='t', method='nearest', fill_value="extrapolate")
-    # merge and make sure no extra dates are added
-    ds = ds.merge(pos.interp_like(ds))
+    ds = ds.merge(pos.interp_like(ds, kwargs={"fill_value": "extrapolate"}))
 
     ds['zb'].attrs = {'units': 'm+NAP', 'long_name': 'bed level, neg down'}
     ds['h'].attrs = {'units': 'cm', 'long_name': 'instrument height above bed, neg down'}

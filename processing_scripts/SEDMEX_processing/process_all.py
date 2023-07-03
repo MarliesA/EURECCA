@@ -24,7 +24,7 @@ if __name__ == "__main__":
         "tailored_timeseries_pressure.py",
         "tailored_timeseries_adv.py",
         "tailored_timeseries_ADCP.py",
-        "reduce_tailored_timeseries"
+        "reduce_tailored_timeseries.py"
     ]
 
     logFile = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments\proclog.txt'

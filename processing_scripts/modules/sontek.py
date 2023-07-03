@@ -134,6 +134,7 @@ def cast_to_blocks_in_xarray(df, sf=10, blockWidth=1740):
                 'heading', 'pitch', 'roll', 'burst', 'bed1', 'bed2']:
         tmp = df[var].values
         tmp = tmp[0:int(NB * blockLength)]
+        N = len(tmp)
         ds[var] = (['t', 'N'], tmp.reshape(NB, int(N / NB)))
     ds['bed1'] = ds.bed1.mean(dim='N')
     ds['bed2'] = ds.bed2.mean(dim='N')
