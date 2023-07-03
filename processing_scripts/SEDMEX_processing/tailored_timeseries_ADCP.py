@@ -63,7 +63,7 @@ def tailor_this_dataset(instrument, config):
         # extent the dataset with appropriate frequency axis
         ##########################################################################
         print('extending dataset with freq axis')
-        fresolution = config['tailoredWaveSettings']['fresolution']
+        fresolution = config['tailoredWaveSettings']['fresolution']['adcp']
         ndiscretetheta = int(360/config['tailoredWaveSettings']['thetaresolution'])
         ds2 = xr.Dataset(
             data_vars={},
@@ -83,6 +83,8 @@ def tailor_this_dataset(instrument, config):
         for key in ds.data_vars:
             ds2[key] = ds[key]
         ds2.attrs = ds.attrs
+
+        ds2['sf'] = ds['sf']
         ds = ds2
 
         ##########################################################################

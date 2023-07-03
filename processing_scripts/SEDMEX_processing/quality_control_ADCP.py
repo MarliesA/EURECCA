@@ -159,6 +159,7 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ncFilePath = os.path.join(config['experimentFolder'], instrument, r'qc\{}.nc'.format(tstart_string))
 
         if len(ds.dropna(dim='t').t) > 0:
+            print('no valid data remaining on this day')
             continue
 
         if os.path.exists(ncFilePath):
@@ -176,6 +177,7 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         for coord in list(ds.coords.keys()):
             ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
+        ds.to_netcdf(ncFilePath, encoding = ds.encoding)
     return
 
 if __name__ == "__main__":

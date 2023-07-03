@@ -33,7 +33,6 @@ instruments:
     - L4C1SOLO
     adcp:
     - L2C7ADCP
-    - L4C1ADCP
 samplingFrequency:
     solo: 8
     ossi: 10
@@ -125,7 +124,10 @@ qcOSSISettings:
         L5C2OSSI: 0.44
         L6C2OSSI: 0.47     
 tailoredWaveSettings:
-    fresolution: 0.02      # Hz
+    fresolution: 
+        vector: 0.03125
+        sontek: 0.0390625
+        adcp:   0.03125
     thetaresolution: 5     # deg
     fmin: 0.05
     fmax: 1.5

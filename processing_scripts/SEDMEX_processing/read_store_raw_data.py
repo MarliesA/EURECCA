@@ -319,6 +319,9 @@ def load_ADCP_data(config):
                           tstop=conf['tstop'])
             P1.load_all_data()
             ds = P1.get_dataset()
+            ds['sf'] = config['samplingFrequency']['adcp']
+            ds['sf'].attrs = {'units': 'Hz', 'long_name': 'sampling frequency'}
+
 
             # add global attribute metadata
             ds.attrs = {'Conventions': 'CF-1.6',
@@ -366,6 +369,9 @@ def load_ADCP_data(config):
                           tstop=conf['tstop'])
             P1.load_all_data()
             ds = P1.get_dataset()
+
+            ds['sf'] = config['samplingFrequency']['adcp']
+            ds['sf'].attrs = {'units': 'Hz', 'long_name': 'sampling frequency'}
 
             # add global attribute metadata
             ds.attrs = {'Conventions': 'CF-1.6',
