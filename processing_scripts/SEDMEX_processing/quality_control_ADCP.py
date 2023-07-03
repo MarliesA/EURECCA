@@ -26,7 +26,7 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ds = ds.sel(t=slice(tstart, tstop))
 
         # check burstDuration
-        if config['burstDuration'] != 1800:
+        if config['burstDuration']['adcp'] != 1800:
             print('ADCP bursts other than 1800 are not implemented')
 
         # compute quality criteria

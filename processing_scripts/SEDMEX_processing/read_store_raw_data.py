@@ -313,10 +313,10 @@ def load_ADCP_data(config):
 
         for i in list(parts.keys()):
             dataFolder = os.path.join(config['experimentFolder'], instrument, r'raw\p' + i)
-            config = {'name': instrument, 'zb': -1.22, 'zi': -0.27, 'tstart': parts[i]['tstart'],
+            conf = {'name': instrument, 'zb': -1.22, 'zi': -0.27, 'tstart': parts[i]['tstart'],
                       'tstop': parts[i]['tstop']}
-            P1 = Profiler(config['name'], dataFolder, zb=config['zb'], zi=config['zi'], tstart=config['tstart'],
-                          tstop=config['tstop'])
+            P1 = Profiler(conf['name'], dataFolder, zb=conf['zb'], zi=conf['zi'], tstart=conf['tstart'],
+                          tstop=conf['tstop'])
             P1.load_all_data()
             ds = P1.get_dataset()
 
@@ -359,11 +359,11 @@ def load_ADCP_data(config):
         }
 
         for i in list(parts.keys()):
-            dataFolder = os.path.join(config['experimentFolder'], instrument, r'raw\p' + i)
-            config = {'name': instrument, 'zb': parts[i]['zb'], 'zi': parts[i]['zi'], 'tstart': parts[i]['tstart'],
+            dataFolder = os.path.join(config['experimentFolder'], instrument, r'raw\p' + i[-1])
+            conf = {'name': instrument, 'zb': parts[i]['zb'], 'zi': parts[i]['zi'], 'tstart': parts[i]['tstart'],
                       'tstop': parts[i]['tstop']}
-            P1 = Profiler(config['name'], dataFolder, zb=config['zb'], zi=config['zi'], tstart=config['tstart'],
-                          tstop=config['tstop'])
+            P1 = Profiler(conf['name'], dataFolder, zb=conf['zb'], zi=conf['zi'], tstart=conf['tstart'],
+                          tstop=conf['tstop'])
             P1.load_all_data()
             ds = P1.get_dataset()
 
@@ -400,16 +400,16 @@ if __name__ == "__main__":
     config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
 
     # SOLO data
-    #load_solo_data(config)
+    load_solo_data(config)
 
     # ossi data
-    #load_ossi_data(config)
+    load_ossi_data(config)
 
     # vector data
-    #load_vector_data(config)
+    load_vector_data(config)
 
     # sontek data
-    #load_sontek_data(config)
+    load_sontek_data(config)
 
     # adcp data
     load_ADCP_data(config)
