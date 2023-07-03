@@ -54,9 +54,6 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     ds['zi'] = ds['zb'] + ds['h'] / 100
     ds['zi'].attrs = {'units': 'm+NAP', 'long_name': 'position ADV control volume'}
 
-    ds['zip'] = ds['zb'] + ds['hpres'] / 100
-    ds['zip'].attrs = {'units': 'm+NAP', 'long_name': 'position pressure sensor'}
-
     ds['eta'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
     ds['eta'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic water level'}
 
@@ -64,8 +61,13 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     ds['d'].attrs = {'units': 'm ', 'long_name': 'water depth'}
     ds['elev'] = ds.zi - ds.zb
     ds['elev'].attrs = {'units': 'm ', 'long_name': 'height probe control volume above bed'}
-    ds['elevp'] = ds.zip - ds.zb
-    ds['elevp'].attrs = {'units': 'm ', 'long_name': 'height ptd above bed'}
+
+    if not 'SONTEK' in ds.name:
+        ds['zip'] = ds['zb'] + ds['hpres'] / 100
+        ds['zip'].attrs = {'units': 'm+NAP', 'long_name': 'position pressure sensor'}
+
+        ds['elevp'] = ds.zip - ds.zb
+        ds['elevp'].attrs = {'units': 'm ', 'long_name': 'height ptd above bed'}
 
     # if amplitude is too low, the probe was emerged
     ma1 = ds.a1 > config['qcADVSettings']['ampTreshold'][ds.name]
@@ -222,7 +224,14 @@ if __name__ == "__main__":
     fileZsRef = os.path.join(config['experimentFolder'], 'waterlevel.nc')
     ds_presref = xr.open_dataset(fileZsRef)
 
-    for instrument in config['instruments']['adv']['vector'] + config['instruments']['adv']['sontek'] :
+    # loop over all sonteks and adv's
+    allVectors = []
+    if not config['instruments']['adv']['vector'] == None:
+        allVectors += config['instruments']['adv']['vector']
+    if not config['instruments']['adv']['sontek'] == None:
+        allVectors += config['instruments']['adv']['sontek']
+
+    for instrument in allVectors:
         print(instrument)
 
         # find all raw data on file for this instrument
@@ -275,9 +284,9 @@ if __name__ == "__main__":
                             # write to file
                             # specify compression for all the variables to reduce file size
                             comp = dict(zlib=True, complevel=5)
-                            ds.encoding = {var: comp for var in ds.data_vars}
-                            for coord in list(ds.coords.keys()):
-                                ds.encoding[coord] = {'zlib': False, '_FillValue': None}
+                            ds_merge.encoding = {var: comp for var in ds_merge.data_vars}
+                            for coord in list(ds_merge.coords.keys()):
+                                ds_merge.encoding[coord] = {'zlib': False, '_FillValue': None}
 
                             ds_merge.to_netcdf(ncFilePath, encoding=ds_merge.encoding)
 
