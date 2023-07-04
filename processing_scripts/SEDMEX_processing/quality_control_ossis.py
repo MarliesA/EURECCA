@@ -62,7 +62,7 @@ if __name__ == "__main__":
         # add these burst averaged variables back on the dataset
         ds2['h'] = ds.h.interp_like(ds2.t)/100
         ds2['zb'] = ds.zb.interp_like(ds2.t)
-        ds2['zi'] = ds.zb + ds.h
+        ds2['zi'] = ds2.zb + ds2.h
 
         # correct for the air pressure fluctuations
         # we assume the minimal pressure on ds is more or less emerged
