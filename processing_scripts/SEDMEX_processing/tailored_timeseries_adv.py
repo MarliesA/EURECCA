@@ -48,7 +48,7 @@ def compute_waves(instrument, config):
             print('extending dataset with freq axis')
             if 'SONTEK' in instrument:
                 fresolution = config['tailoredWaveSettings']['fresolution']['sontek']
-            elif 'vector' in instrument:
+            elif 'VEC' in instrument:
                 fresolution = config['tailoredWaveSettings']['fresolution']['vector']
 
             ndiscretetheta = int(360/config['tailoredWaveSettings']['thetaresolution'])
