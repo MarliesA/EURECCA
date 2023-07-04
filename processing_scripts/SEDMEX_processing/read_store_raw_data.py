@@ -240,6 +240,9 @@ def load_sontek_data(config):
     for instrument in config['instruments']['adv']['sontek']:
         infolder = os.path.join(config['experimentFolder'], instrument, 'raw')
         outfolder = os.path.join(config['experimentFolder'], instrument, 'raw_netcdf')
+        if not os.path.isdir(outfolder):
+            os.mkdir(outfolder)
+
         # get list of all files in folder
         hd1files = sorted(glob.glob(os.path.join(infolder, '*.hd1')))
         ts1files = sorted(glob.glob(os.path.join(infolder, '*.ts1')))
