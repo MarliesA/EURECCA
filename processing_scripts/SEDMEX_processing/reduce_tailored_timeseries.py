@@ -19,13 +19,18 @@ def combine_ncs(instrument, config):
         ds0 = xr.open_dataset(file)
         dslist.append(ds0.drop_dims(['f', 'theta', 'N'], errors='ignore'))
 
-    ds = xr.merge(dslist)
-
     return xr.merge(dslist)
 
 if __name__ == "__main__":
 
-    allInstruments = config['instruments']['adv']['sontek']+config['instruments']['adv']['adv']+config['instruments']['adcp']
+    allInstruments = []
+    if not config['instruments']['adv']['vector'] == None:
+        allInstruments += config['instruments']['adv']['vector']
+    if not config['instruments']['adv']['sontek'] == None:
+        allInstruments += config['instruments']['adv']['sontek']
+    if not config['instruments']['adv']['adcp'] == None:
+        allInstruments += config['instruments']['adv']['adcp']
+
     for instrument in allInstruments:
 
         # only keep coord t and merge all days
