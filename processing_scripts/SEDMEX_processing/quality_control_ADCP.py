@@ -155,8 +155,12 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ds = ds.drop(['heading', 'pitch', 'roll',
                        'pc', 'p', 'v1', 'v2', 'v3', 'name'], errors='ignore')
 
-        # generate file name
-        ncFilePath = os.path.join(config['experimentFolder'], instrument, r'qc\{}.nc'.format(tstart_string))
+        # generate folder and file name
+        folderOut = os.path.join(config['experimentFolder'], instrument, 'qc')
+        if not os.path.isdir(folderOut):
+            os.mkdir(folderOut)
+
+        ncFilePath = os.path.join(folderOut, '{}.nc'.format(tstart_string))
 
         if len(ds.dropna(dim='t').t) > 0:
             print('no valid data remaining on this day')
