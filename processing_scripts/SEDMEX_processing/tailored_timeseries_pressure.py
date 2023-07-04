@@ -20,9 +20,9 @@ def compute_waves(instr, config):
         ds['d'].attrs = {'long_name': 'water depth', 'units': 'm'}
 
         # read fresolution from config
-        if 'ossi' in instr:
+        if 'OSSI' in instr:
             fresolution = config['tailoredWaveSettings']['fresolution']['ossi']
-        elif 'solo' in instr:
+        elif 'SOLO' in instr:
             fresolution = config['tailoredWaveSettings']['fresolution']['solo']
 
         ds2 = xr.Dataset(
