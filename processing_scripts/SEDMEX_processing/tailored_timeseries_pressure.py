@@ -71,7 +71,7 @@ def compute_waves(instr, config):
         ds['Ur'].attrs = {'units': '-', 'long_name': 'Ursell'}
 
         # in the original freq range
-        shapeBounds0 = [config['tailoredWaveSettings']['fmin'], config['tailoredWaveSettings']['fmax0']]
+        shapeBounds0 = [config['tailoredWaveSettings']['fmin'], config['tailoredWaveSettings']['fmax_skas0']]
 
         ds['Skp0'], ds['Asp0'], ds['sigp0'] = (
             ds.puv.compute_SkAs('eta', fixedBounds=True, bounds=shapeBounds0)
