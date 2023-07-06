@@ -24,20 +24,24 @@ def combine_ncs(instrument, config):
 if __name__ == "__main__":
 
     allInstruments = []
+    instrumentType = []
     if not config['instruments']['adv']['vector'] == None:
         allInstruments += config['instruments']['adv']['vector']
+        instrumentType += 'vector'
     if not config['instruments']['adv']['sontek'] == None:
         allInstruments += config['instruments']['adv']['sontek']
+        instrumentType += 'sontek'
     if not config['instruments']['adcp'] == None:
         allInstruments += config['instruments']['adcp']
+        instrumentType += 'adcp'
 
-    for instrument in allInstruments:
+    for instrument, Type in zip(allInstruments, instrumentType):
 
         # only keep coord t and merge all days
         ds = combine_ncs(instrument, config)
 
         # resample to timeseries at burstduration interval, such that missing data get awarded a nan.
-        t_resolution = '{}s'.format(config['burstDuration'][instrument])
+        t_resolution = '{}s'.format(config['burstDuration'][Type])
         ds = ds.resample(t=t_resolution).nearest(tolerance=t_resolution)
 
         # update the construction date
