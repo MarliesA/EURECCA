@@ -29,7 +29,7 @@ if __name__ == "__main__":
     if not config['instruments']['adv']['sontek'] == None:
         allInstruments += config['instruments']['adv']['sontek']
     if not config['instruments']['adv']['adcp'] == None:
-        allInstruments += config['instruments']['adv']['adcp']
+        allInstruments += config['instruments']['adcp']
 
     for instrument in allInstruments:
 

@@ -199,7 +199,7 @@ def tailor_this_dataset(instrument, config):
         ds['sig'].attrs = {'units': 'm/s', 'long_name': 'std(ud)', 'comment': 'vel-based between 0.5Tp and 2Tp'}
 
         # in the traditional freqband 0.05-1 Hz
-        shapeBounds0 = [config['tailoredWaveSettings']['fmin'], config['tailoredWaveSettings']['fmax0']]
+        shapeBounds0 = [config['tailoredWaveSettings']['fmin'], config['tailoredWaveSettings']['fmax_skas0']]
         ds['Sk0'], ds['As0'], ds['sig0'] = (
             ds.puv.compute_SkAs('ud', fixedBounds=True, bounds=shapeBounds0)
         )
