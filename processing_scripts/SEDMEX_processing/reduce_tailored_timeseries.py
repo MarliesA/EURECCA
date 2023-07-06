@@ -78,7 +78,7 @@ if __name__ == "__main__":
         # update script version information
         ds.attrs['git hash'] = get_githash()
 
-        # specify compression for all the variables to reduce file size
+        # update compression for all the variables to reduce file size
         comp = dict(zlib=True, complevel=5)
         ds.encoding = {var: comp for var in ds.data_vars}
         for coord in list(ds.coords.keys()):
