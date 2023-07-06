@@ -37,7 +37,7 @@ samplingFrequency:
     solo: 8
     ossi: 10
     sontek: 10
-    adv: 16
+    vector: 16
     adcp: 4
 physicalConstants:
     g: 9.8

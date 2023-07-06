@@ -24,28 +24,23 @@ def combine_ncs(instrument, config):
 if __name__ == "__main__":
 
     allInstruments = []
-    instrumentType = []
     if not config['instruments']['adv']['vector'] == None:
         allInstruments += config['instruments']['adv']['vector']
-        instrumentType += ['vector']
     if not config['instruments']['adv']['sontek'] == None:
         allInstruments += config['instruments']['adv']['sontek']
-        instrumentType += ['sontek']
     if not config['instruments']['adcp'] == None:
         allInstruments += config['instruments']['adcp']
-        instrumentType += ['adcp']
     if not config['instruments']['ossi'] == None:
         allInstruments += config['instruments']['ossi']
-        instrumentType += ['pres']
     if not config['instruments']['solo'] == None:
         allInstruments += config['instruments']['solo']
-        instrumentType += ['pres']
 
-    for instrument, Type in zip(allInstruments, instrumentType):
+    for instrument in allInstruments:
         print(instrument)
 
-        if Type == 'pres':
-            ds = xr.open_dataset(os.path.join(config['experimentFolder'], instrument, 'tailored', 'instrument.nc'))
+        if 'SOLO' in instrument or 'OSSI' in instrument:
+
+            ds = xr.open_dataset(os.path.join(config['experimentFolder'], instrument, 'tailored', instrument + '.nc'))
             ds = ds.drop_dims(['f', 'N'], errors='ignore')
             # update the summary
             ds.attrs['summary'] = 'tailored timeseries of wave statistics'
@@ -62,6 +57,17 @@ if __name__ == "__main__":
         ds = ds.drop_vars(vars2drop, errors='ignore')
 
         # resample to timeseries at burstduration interval, such that missing data get awarded a nan.
+        if 'SOLO' in instrument:
+            Type = 'solo'
+        if 'OSSI' in instrument:
+            Type = 'ossi'
+        if 'VEC' in instrument:
+            Type = 'vector'
+        if 'SONTEK' in instrument:
+            Type = 'sontek'
+        if 'ADCP' in instrument:
+            Type = 'adcp'
+
         t_resolution = '{}s'.format(config['burstDuration'][Type])
         ds = ds.resample(t=t_resolution).nearest(tolerance=t_resolution)
 
@@ -69,10 +75,14 @@ if __name__ == "__main__":
         # update the construction date
         ds.attrs['construction datetime'] = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
 
-
-
         # update script version information
         ds.attrs['git hash'] = get_githash()
 
-        ds.to_netcdf(os.path.join(config['experimentFolder'], instrument, 'tailored', 'tailored_' + instrument + '.nc'),
-                     encoding=ds.encoding)
+        # specify compression for all the variables to reduce file size
+        comp = dict(zlib=True, complevel=5)
+        ds.encoding = {var: comp for var in ds.data_vars}
+        for coord in list(ds.coords.keys()):
+            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
+
+        fileOut = os.path.join(config['experimentFolder'], instrument, 'tailored', 'tailored_' + instrument + '.nc')
+        ds.to_netcdf(fileOut, encoding=ds.encoding)

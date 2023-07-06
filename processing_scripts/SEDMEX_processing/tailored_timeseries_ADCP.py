@@ -254,7 +254,7 @@ def tailor_this_dataset(instrument, config):
         for coord in list(ds.coords.keys()):
             ds.encoding[coord] = {'zlib': False, '_FillValue': None}
 
-        ds.to_netcdf((os.path.join(ncOutDir, file.split('\\')[-1])))
+        ds.to_netcdf((os.path.join(ncOutDir, ds.instrument + '_' + file.split('\\')[-1])))
 
 
 if __name__ == "__main__":
