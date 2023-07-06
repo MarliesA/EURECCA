@@ -27,13 +27,13 @@ if __name__ == "__main__":
     instrumentType = []
     if not config['instruments']['adv']['vector'] == None:
         allInstruments += config['instruments']['adv']['vector']
-        instrumentType += 'vector'
+        instrumentType += ['vector']
     if not config['instruments']['adv']['sontek'] == None:
         allInstruments += config['instruments']['adv']['sontek']
-        instrumentType += 'sontek'
+        instrumentType += ['sontek']
     if not config['instruments']['adcp'] == None:
         allInstruments += config['instruments']['adcp']
-        instrumentType += 'adcp'
+        instrumentType += ['adcp']
 
     for instrument, Type in zip(allInstruments, instrumentType):
 
