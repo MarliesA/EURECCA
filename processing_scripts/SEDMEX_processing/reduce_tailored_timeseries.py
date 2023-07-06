@@ -28,7 +28,7 @@ if __name__ == "__main__":
         allInstruments += config['instruments']['adv']['vector']
     if not config['instruments']['adv']['sontek'] == None:
         allInstruments += config['instruments']['adv']['sontek']
-    if not config['instruments']['adv']['adcp'] == None:
+    if not config['instruments']['adcp'] == None:
         allInstruments += config['instruments']['adcp']
 
     for instrument in allInstruments:
