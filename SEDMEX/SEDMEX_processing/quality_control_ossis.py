@@ -2,6 +2,7 @@ import os
 import yaml
 from pathlib import Path
 import numpy as np
+import pandas as pd
 import xarray as xr
 from sedmex_info_loaders import get_githash
 
@@ -77,6 +78,14 @@ if __name__ == "__main__":
         else:
             ds2['p'] = p3 + rhog * ds2.zi
 
+        # also prescribe offsets at locations where we believe barnacles were covering the membrane creating an offset
+        for t in config['qcOSSISettings']['zsOffset_temporal']:
+            if instr in config['qcOSSISettings']['zsOffset_temporal'][t]['instr']:
+                tstart = pd.to_datetime(str(config['qcOSSISettings']['zsOffset_temporal'][t]['tstart']))
+                tstop = pd.to_datetime(str(config['qcOSSISettings']['zsOffset_temporal'][t]['tstop']))
+                offset = config['qcOSSISettings']['zsOffset_temporal'][t]['offset']
+                ds2['p'].loc[dict(t=ds2.t[(ds2.t > tstart) & (ds2.t < tstop)])] = \
+                    ds2['p'].loc[dict(t=ds2.t[(ds2.t > tstart) & (ds2.t < tstop)])] + offset*rhog
 
         ds2['p'].attrs = {'units': 'Pa +NAP', 'long_name': 'pressure', 'comments': 'corrected for drift air pressure'}
         ds2['h'].attrs = {'units': 'm', 'long_name': 'instrument height above bed', 'comment': 'neg down'}
