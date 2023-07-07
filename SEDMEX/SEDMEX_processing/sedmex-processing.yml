@@ -122,7 +122,28 @@ qcOSSISettings:
         L1C2OSSI: 0.55
         L4C3OSSI: 0.38
         L5C2OSSI: 0.44
-        L6C2OSSI: 0.47     
+        L6C2OSSI: 0.47   
+    zsOffset_temporal: # barnacles growing on the pressure sensor, identified from mean pressure
+        t1:
+            instr: L1C2OSSI
+            tstart: 20210925053000
+            tstop: 20210927183000
+            offset: -0.52
+        t2:
+            instr: L2C8OSSI
+            tstart: 20211001090000
+            tstop: 20211004123000
+            offset: -0.10     
+        t3:
+            instr: L2C8OSSI
+            tstart: 20211001090000
+            tstop: 20211004123000
+            offset: 0.39    
+        t4: 
+            instr: L2C6OSSI
+            tstart: 20211004120000
+            tstop: 20211007083000
+            offset: 0.11            
 tailoredWaveSettings:
     fresolution: 
         vector: 0.03125
