@@ -136,8 +136,8 @@ qcOSSISettings:
             offset: -0.10     
         t3:
             instr: L2C8OSSI
-            tstart: 20211001090000
-            tstop: 20211004123000
+            tstart: 20211009184000
+            tstop: 20211010173000
             offset: 0.39    
         t4: 
             instr: L2C6OSSI

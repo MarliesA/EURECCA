@@ -127,6 +127,13 @@ if __name__ == "__main__":
 
     config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
 
-    for instr in config['instruments']['ossi'] + config['instruments']['solo']:
+    # loop over all sonteks and adv's
+    allInstr = []
+    if not config['instruments']['ossi'] == None:
+        allInstr += config['instruments']['ossi']
+    if not config['instruments']['solo'] == None:
+        allInstr += config['instruments']['solo']
+
+    for instr in allInstr:
         print(instr)
         compute_waves(instr, config)
