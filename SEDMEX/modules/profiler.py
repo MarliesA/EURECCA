@@ -341,19 +341,20 @@ class Profiler(object):
                 # only read the block that we requested
                 if ((i>=skipRowsDat) & (i< (skipRowsDat + nSamples))):
                     splittedLine =  [float(ix) for ix in line.split() if len(ix)>0] 
-                    x.append(splittedLine[12:17])                    
+                    x.append(splittedLine[12:])
                 elif i>= (skipRowsDat + nSamples):
                     break
         x = np.vstack(x)
         
         #reshape into 3D array. This goes right only when there is no missing data on the file
-        x = x.reshape(nBursts,self.nSampBurst,5)
+        x = x.reshape(nBursts,self.nSampBurst,7)
         heading = np.squeeze(x[:,:,0]).astype(int) # deg
         pitch = np.squeeze(x[:,:,1]).astype(int) #deg
         roll = np.squeeze(x[:,:,2]).astype(int) #deg       
         pressure= np.squeeze(x[:,:,3])*1e4 #Pa
         temperature = np.squeeze(x[:,:,4]) #deg C
-        
+        anl1 = np.squeeze(x[:,:,5]) # counts
+        anl2 = np.squeeze(x[:,:,6]) # counts
         #construct dataset
         ds = xr.Dataset(
             data_vars = dict(
@@ -361,7 +362,9 @@ class Profiler(object):
                 pitch = (('t','N'),pitch,{'long_name':'pitch','unit':'deg'}),
                 roll = (('t','N'),roll,{'long_name':'roll','unit':'deg' }),
                 p = (('t','N'),pressure,{'long_name':'pressure','unit':'Pa' }),
-                temp = (('t','N'),temperature,{'long_name':'temperature','unit':'deg C' })),
+                temp = (('t','N'),temperature,{'long_name':'temperature','unit':'deg C' }),
+                anl1=(('t', 'N'), anl1, {'long_name': 'analog input 1', 'unit': 'counts'}),
+                anl2 = (('t', 'N'), anl2, {'long_name': 'analog input 2', 'unit': 'counts'})),
             coords = dict(
                 t = t,
                 N = self.N

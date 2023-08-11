@@ -134,6 +134,9 @@ def vector_read_write_to_netcdf(instrument, experimentFolder, dataPath, isxy, ts
 
         ds = add_positioning_info(ds, instrument, experimentFolder)
 
+        ds['anl1'].attrs= {'units': 'counts', 'long_name': 'turbidity'}
+        ds = ds.drop_vars(['anl2'])
+
         # add global attribute metadata
         ds.attrs = {
             'Conventions': 'CF-1.6',
@@ -324,7 +327,10 @@ def load_ADCP_data(config):
             ds = P1.get_dataset()
             ds['sf'] = config['samplingFrequency']['adcp']
             ds['sf'].attrs = {'units': 'Hz', 'long_name': 'sampling frequency'}
+            ds['anl1'].attrs = {'units': 'counts', 'long_name': 'turbidity'}
 
+            # we did not measure anything on anl2 so drop it
+            ds = ds.drop_vars(['anl2'])
 
             # add global attribute metadata
             ds.attrs = {'Conventions': 'CF-1.6',
@@ -409,16 +415,16 @@ if __name__ == "__main__":
     config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
 
     # SOLO data
-    load_solo_data(config)
+    #load_solo_data(config)
 
     # ossi data
-    load_ossi_data(config)
+    #load_ossi_data(config)
 
     # vector data
-    load_vector_data(config)
+    #load_vector_data(config)
 
     # sontek data
-    load_sontek_data(config)
+    #load_sontek_data(config)
 
     # adcp data
     load_ADCP_data(config)
