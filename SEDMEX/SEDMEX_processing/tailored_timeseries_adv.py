@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 from datetime import datetime
 from sedmex_info_loaders import get_githash
-from ..modules import xrMethodAccessors
+import xrMethodAccessors
 from encoding_sedmex import encoding_sedmex
 
 def compute_waves(instrument, config):
@@ -324,7 +324,7 @@ def compute_waves(instrument, config):
 
 if __name__ == "__main__":
 
-    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    config = yaml.safe_load(Path('c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing\sedmex-processing.yml').read_text())
 
     # loop over all sonteks and adv's
     allVectors = []

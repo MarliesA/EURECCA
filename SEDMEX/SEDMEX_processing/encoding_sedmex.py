@@ -14,7 +14,7 @@ def encoding_sedmex(ds):
     for var in ['sf', 'h', 'hpres', 'io', 'zi', 'zip', 'elevp', 'elev', 'd']:
         encoding[var] = dict(zlib=True, complevel=5, dtype='int16', scale_factor=0.01, _FillValue=-9999)
     for var in ['p', 'eta']:
-        encoding[var] = dict(zlib=True, complevel=5, dtype='int16', scale_factor=0.001, _FillValue=-9999)
+        encoding[var] = dict(zlib=True, complevel=5, dtype='int32', scale_factor=0.001, _FillValue=-9999)
     for var in ['u', 'v', 'w', 'uang', 'umag', 'Hm0', 'Tp', 'Tm01', 'Tm02', 'Tmm10', 'Tps', 'puvdir', 'dspr', 'u_ssm', 'ucm', 'ulm', 'Sk', 'As', 'sig', 'zs', 'k', 'Ur', 'nAs', 'nSk' ]:
         encoding[var] = dict(zlib=True, complevel=5, dtype='int16', scale_factor=0.0001, _FillValue=-9999)
 

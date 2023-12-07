@@ -12,6 +12,9 @@ Created on Fri Mar  23 10:02:14 2023
 - Check the respective scripts for further description of the processing steps performed
 """
 from datetime import datetime
+import os
+
+fp = r'c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing'
 
 if __name__ == "__main__":
 
@@ -24,7 +27,7 @@ if __name__ == "__main__":
         "tailored_timeseries_pressure.py",
         "tailored_timeseries_adv.py",
         "tailored_timeseries_ADCP.py",
-        "reduce_tailored_timeseries.py"
+        # "reduce_tailored_timeseries.py"
     ]
 
     logFile = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20210908_campaign\instruments\proclog.txt'
@@ -35,7 +38,7 @@ if __name__ == "__main__":
 
         try:
 
-            with open(script) as f:
+            with open(os.path.join(fp, script)) as f:
                 exec(f.read())
 
         except Exception as e:

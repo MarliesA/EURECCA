@@ -44,7 +44,7 @@ def cast_to_blocks(ds0, burstDuration):
 
 if __name__ == "__main__":
 
-    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    config = yaml.safe_load(Path('c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing\sedmex-processing.yml').read_text())
 
     dsCtd = xr.open_dataset(os.path.join(config['experimentFolder'], r'L2C1CTD\raw_netcdf\L2C1CTD_20210910.nc'))
 
@@ -79,13 +79,13 @@ if __name__ == "__main__":
 
         # make sure there is bed level information on all moments in time
         ds0['zb'] = ds0.zb.interpolate_na('t', method='nearest', fill_value='extrapolate')
-        ds['zb'].attrs = {'units': 'm+NAP','long_name': 'bed level'}
+        ds0['zb'].attrs = {'units': 'm+NAP','long_name': 'bed level'}
 
         ds0['h'] = ds0.h.interpolate_na('t', method='nearest', fill_value='extrapolate')/100
-        ds['h'].attrs = {'units': 'm','long_name': 'instrument height above bed', 'comment': 'neg down'}
+        ds0['h'].attrs = {'units': 'm','long_name': 'instrument height above bed', 'comment': 'neg down'}
 
         ds0['zi'] = ds0.zb + ds0.h
-        ds['zi'].attrs = {'units': 'm+NAP', 'long_name': 'instrument position'}
+        ds0['zi'].attrs = {'units': 'm+NAP', 'long_name': 'instrument position'}
 
         # correct for the air pressure fluctuations
         # select those dates on which we know the measured pressure should be equal

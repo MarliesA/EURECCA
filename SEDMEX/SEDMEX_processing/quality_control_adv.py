@@ -5,7 +5,7 @@ from pathlib import Path
 import xarray as xr
 import numpy as np
 import pandas as pd
-from ..modules import puv
+import puv
 from sedmex_info_loaders import get_githash
 from encoding_sedmex import encoding_sedmex
 from datetime import datetime
@@ -29,7 +29,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     import xrMethodAccessors
 
     # we reshape the dataset to blocks of blockLength seconds.
-    if 'SONTEK' in ds.name:
+    if 'SONTEK' in ds.instrument:
         # the sontek measured in blocks of half hour. if we want analysis in another duration, we distribute the
         # burst into blocks of data such that the missing 60 seconds every half hour get evenly distributed
         # over the three 10min blocks
@@ -62,7 +62,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     ds['h'] = ds.zi - ds.zb
     ds['h'].attrs = {'units': 'm ', 'long_name': 'height probe control volume above bed'}
 
-    if not 'SONTEK' in ds.name:
+    if not 'SONTEK' in ds.instrument:
         ds['zip'] = ds['zb'] + ds['hpres'] / 100
         ds['zip'].attrs = {'units': 'm+NAP', 'long_name': 'position pressure sensor'}
 
@@ -70,9 +70,9 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
         ds['hpres'].attrs = {'units': 'm ', 'long_name': 'height pressure sensor above bed'}
 
     # if amplitude is too low, the probe was emerged
-    ma1 = ds.a1 > config['qcADVSettings']['ampTreshold'][ds.name]
-    ma2 = ds.a2 > config['qcADVSettings']['ampTreshold'][ds.name]
-    ma3 = ds.a3 > config['qcADVSettings']['ampTreshold'][ds.name]
+    ma1 = ds.a1 > config['qcADVSettings']['ampTreshold'][ds.instrument]
+    ma2 = ds.a2 > config['qcADVSettings']['ampTreshold'][ds.instrument]
+    ma3 = ds.a3 > config['qcADVSettings']['ampTreshold'][ds.instrument]
 
     # if correlation is outside confidence range
     if config['qcADVSettings']['corTreshold'] == 'elgar':
@@ -89,9 +89,9 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     mc3 = ds.cor3 > criticalCorrelation
 
     # if observation is outside of velocity range
-    mu1 = np.abs(ds.u) < config['qcADVSettings']['uLim'][ds.name]
-    mu2 = np.abs(ds.v) < config['qcADVSettings']['uLim'][ds.name]
-    mu3 = np.abs(ds.w) < config['qcADVSettings']['uLim'][ds.name]
+    mu1 = np.abs(ds.u) < config['qcADVSettings']['uLim'][ds.instrument]
+    mu2 = np.abs(ds.v) < config['qcADVSettings']['uLim'][ds.instrument]
+    mu3 = np.abs(ds.w) < config['qcADVSettings']['uLim'][ds.instrument]
 
     # if du larger than outlierCrit*std(u) then we consider it outlier and hence remove:
     md1 = np.abs(ds.u.diff('N')) < config['qcADVSettings']['outlierCrit'] * ds.u.std(dim='N')
@@ -222,7 +222,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
 
 if __name__ == "__main__":
 
-    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    config = yaml.safe_load(Path('c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing\sedmex-processing.yml').read_text())
 
     # preload the reference waterlevel to which the pressure recordings are calibrated
     fileZsRef = os.path.join(config['experimentFolder'], 'waterlevel.nc')
@@ -272,7 +272,7 @@ if __name__ == "__main__":
                         ds_sel = ds.sel(t=date)
 
                         if len(ds.t) > 0:
-                            ncFilePath = os.path.join(folderOut, '{}_{}.nc'.format(ds.name, date))
+                            ncFilePath = os.path.join(folderOut, '{}_{}.nc'.format(ds.instrument, date))
 
                             # if there is already a file on the drive, merge the results
                             if os.path.exists(ncFilePath):

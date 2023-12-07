@@ -7,11 +7,11 @@ import glob
 from datetime import datetime
 import yaml
 from pathlib import Path
-from ..modules.vector import Vector
-from ..modules.solo import Solo
-from ..modules.ossi import Ossi
-from ..modules.profiler import Profiler
-from ..modules import sontek 
+from vector import Vector
+from solo import Solo
+from ossi import Ossi
+from profiler import Profiler
+import sontek 
 from sedmex_info_loaders import load_instrument_information, add_positioning_info, get_githash
 from encoding_sedmex import encoding_sedmex
 
@@ -77,7 +77,7 @@ def load_ossi_data(config):
         fold = os.path.join(config['experimentFolder'], instr, 'raw_netcdf')
         if not os.path.isdir(fold):
             os.mkdir(fold)
-        ncFilePath = os.path.join(fold, '{}.nc'.format(ds.name))
+        ncFilePath = os.path.join(fold, '{}.nc'.format(instr))
 
         # add script version information
         ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
@@ -158,7 +158,7 @@ def vector_read_write_to_netcdf(instrument, experimentFolder, dataPath, isxy, ts
         if not os.path.isdir(fold):
             os.mkdir(fold)
         ncFilePath = os.path.join(fold, '{}_{}.nc'.format(
-            ds.name,
+            instrument,
             ds.t.isel(t=0).dt.strftime('%Y%m%d').values
         ))
         ds.to_netcdf(ncFilePath, encoding=encoding)
@@ -393,7 +393,7 @@ def load_ADCP_data(config):
 
 if __name__ == "__main__":
 
-    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    config = yaml.safe_load(Path('c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing\sedmex-processing.yml').read_text())
 
     # SOLO data
     #load_solo_data(config)
@@ -402,10 +402,10 @@ if __name__ == "__main__":
     #load_ossi_data(config)
 
     # vector data
-    #load_vector_data(config)
+    load_vector_data(config)
 
     # sontek data
-    #load_sontek_data(config)
+    load_sontek_data(config)
 
     # adcp data
-    load_ADCP_data(config)
+    #load_ADCP_data(config)

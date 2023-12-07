@@ -4,7 +4,7 @@ import yaml
 from pathlib import Path
 import numpy as np
 import xarray as xr
-from ..modules import xrMethodAccessors
+import xrMethodAccessors
 from sedmex_info_loaders import get_githash
 from encoding_sedmex import encoding_sedmex
 from datetime import datetime
@@ -161,7 +161,7 @@ def tailor_this_dataset(instrument, config):
              'comments': 'cartesian convention, from puv Method of maximum Entropy'}
         )
 
-        _, _, _, _, _, _, ds['puvdir'], ds['puv_dspr'] = ds.puv.compute_wave_params_from_S(var='S', **kwargs)
+        _, _, _, _, _, _, ds['puvdir'], ds['dspr'] = ds.puv.compute_wave_params_from_S(var='S', **kwargs)
         ds['puvdir'].attrs = (
             {'units': 'deg', 'long_name': 'wave prop dir',
                 'comments': 'cartesian convention, from puv Method of maximum Entropy'}
@@ -271,7 +271,7 @@ def tailor_this_dataset(instrument, config):
 
 if __name__ == "__main__":
 
-    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    config = yaml.safe_load(Path('c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing\sedmex-processing.yml').read_text())
     
     for instrument in config['instruments']['adcp']:
         tailor_this_dataset(instrument, config)
