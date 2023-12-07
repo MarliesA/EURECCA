@@ -4,8 +4,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
-import puv
+from ..modules import puv
 from sedmex_info_loaders import get_githash
+from encoding_sedmex import encoding_sedmex
+from datetime import datetime
 
 def qc_this_rawdatafile(instrument, heading, part, config):
     ds = xr.open_dataset(os.path.join(config['experimentFolder'], instrument, r'raw_netcdf\part' + part + '.nc'))
@@ -99,8 +101,8 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ds['pc'].attrs = {'units': 'Pa', 'long_name': 'pressure',
                           'comments': 'referenced to pressure L2C10SOLO/L2C9OSSI'}
 
-        ds['eta'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
-        ds['eta'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic water level'}
+        ds['p'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
+        ds['p'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic surface elevation', 'comments': 'corrected for drift air pressure and referenced to NAP'}
 
         ds['d'] = ds.eta.mean(dim='N') - ds.zb
         ds['d'].attrs = {'units': 'm ', 'long_name': 'water depth'}
@@ -110,10 +112,10 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ds['zb'] = (('t'), ds.zb.values * np.ones(len(ds.t.values)))
         ds['zb'].attrs = {'units': 'm+NAP ', 'long_name': 'bed level'}
         ds['zi'] = (('t'), ds.zi.values * np.ones(len(ds.t.values)))
-        ds['zi'].attrs = {'units': 'm+NAP ', 'long_name': 'instrument height'}
+        ds['zi'].attrs = {'units': 'm+NAP ', 'long_name': 'instrument position'}
 
-        ds['elev'] = ds.zi - ds.zb
-        ds['elev'].attrs = {'units': 'm ', 'long_name': 'height probe control volume above bed'}
+        ds['h'] = ds.zi - ds.zb
+        ds['h'].attrs = {'units': 'm ', 'long_name': 'height pressure sensor above bed'}
 
         # save to netCDF
         # all variables that are only used for the QC are block averaged to reduce amount of info on QC files
@@ -138,22 +140,25 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ds['hr2c3'] = ds.hr2c3.mean(dim='N')
         ds['hr2c3'].attrs = {'units': '-', 'long_name': 'block averaged hr2 correlation beam 3'}
 
-
+        ds['N'].attrs = {'units': 's', 'long_name': 'block local time'}  
+        ds['t'].attrs = {'long_name': 'block start time'}  
+        ds['z'].attrs = {'units': 'm+NAP', 'long_name': 'vertical position'}
 
         # save if there is valid data on the day
-        ds.attrs['version'] = 'v1'
-        ds.attrs['comment'] = 'Quality checked data:' \
-                              ' correlation and amplitude checks done and spikes were removed. ' \
+        # ds.attrs['version'] = 'v1'
+        ds.attrs['construction datetime'] = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+        ds.attrs['summary'] = 'SEDMEX field campaign: quality checked ADCP data.' \
+                              ' Correlation and amplitude checks done and spikes were removed. ' \
                               'Velocities rotated to ENU coordinates based on heading and configuration in the field.' \
                               'data that was marked unfit has been removed and replaced by interpolation.'
-        try:
-            ds.attrs['instrument'] = ds.name.values[0]
-        except:
-            ds.attrs['instrument'] = ds.name.values
+        # try:
+        #     ds.attrs['instrument'] = ds.name.values[0]
+        # except:
+        #     ds.attrs['instrument'] = ds.name.values
 
         # we no longer need these:
         ds = ds.drop(['heading', 'pitch', 'roll',
-                       'pc', 'p', 'v1', 'v2', 'v3', 'name'], errors='ignore')
+                       'pc', 'v1', 'v2', 'v3', 'name'], errors='ignore')
 
         # generate folder and file name
         folderOut = os.path.join(config['experimentFolder'], instrument, 'qc')
@@ -175,13 +180,8 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ds.attrs['git hash'] = get_githash()
 
         # write to file
-        # specify compression for all the variables to reduce file size
-        comp = dict(zlib=True, complevel=5)
-        ds.encoding = {var: comp for var in ds.data_vars}
-        for coord in list(ds.coords.keys()):
-            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
-
-        ds.to_netcdf(ncFilePath, encoding = ds.encoding)
+        encoding = encoding_sedmex(ds)
+        ds.to_netcdf(ncFilePath, encoding = encoding)
     return
 
 if __name__ == "__main__":

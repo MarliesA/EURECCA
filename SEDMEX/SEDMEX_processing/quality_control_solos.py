@@ -5,6 +5,8 @@ import xarray as xr
 import pandas as pd
 import numpy as np
 from sedmex_info_loaders import get_githash
+from encoding_sedmex import encoding_sedmex
+from datetime import datetime
 
 def cast_to_blocks(ds0, burstDuration):
 
@@ -77,8 +79,13 @@ if __name__ == "__main__":
 
         # make sure there is bed level information on all moments in time
         ds0['zb'] = ds0.zb.interpolate_na('t', method='nearest', fill_value='extrapolate')
+        ds['zb'].attrs = {'units': 'm+NAP','long_name': 'bed level'}
+
         ds0['h'] = ds0.h.interpolate_na('t', method='nearest', fill_value='extrapolate')/100
+        ds['h'].attrs = {'units': 'm','long_name': 'instrument height above bed', 'comment': 'neg down'}
+
         ds0['zi'] = ds0.zb + ds0.h
+        ds['zi'].attrs = {'units': 'm+NAP', 'long_name': 'instrument position'}
 
         # correct for the air pressure fluctuations
         # select those dates on which we know the measured pressure should be equal
@@ -91,19 +98,23 @@ if __name__ == "__main__":
         ds0['p'] = p3 + ds0.zi*config['physicalConstants']['rho']*config['physicalConstants']['g']
 
         ds = cast_to_blocks(ds0, burstDuration=config['burstDuration']['solo'])
-        ds['sf'] = config['samplingFrequency']['ossi']
+        ds['sf'] = config['samplingFrequency']['solo']
         ds['sf'].attrs = {'units': 'Hz', 'long_name': 'sampling frequency'}
 
         # remove all bursts where instrument fell dry
         ds['p'] = ds.p.where( ds.p.std(dim='N') > 70)
-        ds['p'].attrs = {'units': 'Pa +NAP', 'long_name': 'pressure','comments': 'corrected for air pressure'}
 
-        ds['zi'].attrs = {'units': 'm+NAP', 'long_name': 'zi'}
-        ds['zb'].attrs = {'units': 'm+NAP','long_name': 'zb'}
-        ds['sf'].attrs = {'units': 'Hz','long_name': 'sampling frequency'}
+        # after rebuttal change unit
+        ds['p'] = ds.p/config['physicalConstants']['rho']*config['physicalConstants']['g']
+        ds['p'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic surface elevation','comments': 'corrected for air pressure and referenced to NAP'}  
+        
+        ds['N'].attrs = {'units': 's', 'long_name': 'block local time'} 
+        ds['t'].attrs = {'long_name': 'block start time'}  
+
         ds.attrs = ds0.attrs
-        ds.attrs['summary'] = 'SEDMEX field campaign, pressure corrected for air pressure and quality checked'
-        ds['name'] = instr
+        ds.attrs['construction datetime'] = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+        ds.attrs['summary'] = 'SEDMEX field campaign: quality checked pressure data. Corrected for air pressure and referenced to NAP' 
+        # ds['name'] = instr
 
         folderOut = os.path.join(config['experimentFolder'], instr, 'qc')
         if not os.path.isdir(folderOut):
@@ -114,12 +125,8 @@ if __name__ == "__main__":
         ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
         ds.attrs['git hash'] = get_githash()
 
-        comp = dict(zlib=True, complevel=5)
-        ds.encoding = {var: comp for var in ds.data_vars}
-        for coord in list(ds.coords.keys()):
-            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
-
-        ds.to_netcdf(ncFilePath, encoding=ds.encoding )
+        encoding = encoding_sedmex(ds)
+        ds.to_netcdf(ncFilePath, encoding=encoding )
 
 
 

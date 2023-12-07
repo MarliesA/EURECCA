@@ -5,10 +5,10 @@ from pathlib import Path
 import xarray as xr
 import numpy as np
 import pandas as pd
-import puv
+from ..modules import puv
 from sedmex_info_loaders import get_githash
-
-
+from encoding_sedmex import encoding_sedmex
+from datetime import datetime
 
 
 def hor2vert_vector_mapping(u, v, w):
@@ -54,20 +54,20 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     ds['zi'] = ds['zb'] + ds['h'] / 100
     ds['zi'].attrs = {'units': 'm+NAP', 'long_name': 'position ADV control volume'}
 
-    ds['eta'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
-    ds['eta'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic water level'}
+    ds['p'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
+    ds['p'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic surface elevation', 'comments':'corrected for air pressure fluctuations and referenced to NAP'}
 
-    ds['d'] = ds.eta.mean(dim='N') - ds.zb
+    ds['d'] = ds.p.mean(dim='N') - ds.zb
     ds['d'].attrs = {'units': 'm ', 'long_name': 'water depth'}
-    ds['elev'] = ds.zi - ds.zb
-    ds['elev'].attrs = {'units': 'm ', 'long_name': 'height probe control volume above bed'}
+    ds['h'] = ds.zi - ds.zb
+    ds['h'].attrs = {'units': 'm ', 'long_name': 'height probe control volume above bed'}
 
     if not 'SONTEK' in ds.name:
         ds['zip'] = ds['zb'] + ds['hpres'] / 100
         ds['zip'].attrs = {'units': 'm+NAP', 'long_name': 'position pressure sensor'}
 
-        ds['elevp'] = ds.zip - ds.zb
-        ds['elevp'].attrs = {'units': 'm ', 'long_name': 'height ptd above bed'}
+        ds['hpres'] = ds.zip - ds.zb
+        ds['hpres'].attrs = {'units': 'm ', 'long_name': 'height pressure sensor above bed'}
 
     # if amplitude is too low, the probe was emerged
     ma1 = ds.a1 > config['qcADVSettings']['ampTreshold'][ds.name]
@@ -121,7 +121,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     # set outliers to nan
     ds['u'] = ds.u.where(ds.maskv).where(ds.maskd)
     ds['v'] = ds.v.where(ds.maskv).where(ds.maskd)
-    ds['eta'] = ds.eta.where(ds.maskp).where(ds.maskd)
+    ds['p'] = ds.p.where(ds.maskp).where(ds.maskd)
 
     # drop bursts with too many nans (>maxFracNans) in the velocity data
     ds2 = ds.where( np.isnan(ds.u).sum(dim='N') < config['qcADVSettings']['maxFracNans'] * len(ds.N)).dropna(dim='t', how='all')
@@ -132,7 +132,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
         return ds2
 
     # interpolate nans
-    for var in ['u', 'v', 'w', 'eta']:
+    for var in ['u', 'v', 'w', 'p']:
         ds[var] = ds2[var].interpolate_na(
             dim='N',
             method='cubic',
@@ -169,20 +169,24 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
     ds['v'].attrs = {'units': 'm/s', 'long_name': 'velocity N'}
     ds['w'].attrs = {'units': 'm/s', 'long_name': 'velocity U'}
 
+
     # saving
     if 'SONTEK' in instrument:
-        ds.attrs['summary'] = 'Quality checked data: correlation checks done and spikes were removed.' \
+        ds.attrs['summary'] = 'SEDMEX field campaign: quality checked ADV data. Correlation checks done and spikes were removed.' \
                 'Velocities rotated to ENU coordinates based on heading and configuration in the field.' \
                                        'data that was marked unfit has been removed or replaced by interpolation.'\
-                                       'Pressure was referenced to air pressure.' \
+                                       'Pressure was referenced to air pressure and NAP.' \
                                        'Variance of the pressure signal only to be used for directional wave distribution,' \
                                        ' not for wave heights (scale is off and the Sontek pressure sensor is uncalibrated).'
     else:
-        ds.attrs['summary'] = 'Quality checked data: correlation checks done and spikes were removed,' \
+        ds.attrs['summary'] = 'SEDMEX field campaign: quality checked ADV data. Correlation checks done and spikes were removed,' \
                               'Velocities rotated to ENU coordinates based on heading and configuration in the field.' \
                               'data that was marked unfit has been removed or replaced by interpolation.'\
-                              'Pressure was referenced to air pressure.'
+                              'Pressure was referenced to air pressure and NAP.'
 
+
+    ds['N'].attrs = {'units': 's', 'long_name': 'block local time'} 
+    ds['t'].attrs = {'long_name': 'block start time'}  
 
     # save to netCDF
     # all variables that are only used for the QC are block averaged to reduce amount of info on QC files
@@ -211,7 +215,7 @@ def resample_quality_check_replace_dataset(ds, ds_presref, config):
 
     # we no longer need these:
     ds = ds.drop_vars(['heading', 'pitch', 'roll',
-                  'voltage', 'pc'], errors='ignore')
+                  'voltage', 'pc', 'maskp', 'maskv', 'maskd', 'ma', 'md', 'mu', 'mc'], errors='ignore')
 
     return ds
 
@@ -278,17 +282,13 @@ if __name__ == "__main__":
                                 ds_merge = ds_sel
 
                             # add script version information
-                            ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
-                            ds.attrs['git hash'] = get_githash()
+                            ds_merge.attrs['construction datetime'] = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+                            ds_merge.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+                            ds_merge.attrs['git hash'] = get_githash()
 
                             # write to file
-                            # specify compression for all the variables to reduce file size
-                            comp = dict(zlib=True, complevel=5)
-                            ds_merge.encoding = {var: comp for var in ds_merge.data_vars}
-                            for coord in list(ds_merge.coords.keys()):
-                                ds_merge.encoding[coord] = {'zlib': False, '_FillValue': None}
-
-                            ds_merge.to_netcdf(ncFilePath, encoding=ds_merge.encoding)
+                            encoding = encoding_sedmex(ds_merge)
+                            ds_merge.to_netcdf(ncFilePath, encoding=encoding)
 
 
 
