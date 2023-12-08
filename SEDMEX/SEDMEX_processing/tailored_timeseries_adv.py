@@ -305,7 +305,7 @@ def compute_waves(instrument, config):
             ds['Skp'].attrs = {'units': '-', 'long_name': 'near-bed pressure skewness'}
 
             # we no longer need these:
-            vars2drop = ['Skc', 'Asc', 'sigc', 'Skl', 'Asl', 'sigl', 'Skp0', 'Asp0', 'sigp0', 'Skp', 'Asp', 'sigp',
+            vars2drop = ['Skc', 'Asc', 'sigc', 'Skl', 'Asl', 'sigl', 'Skp0', 'Asp0', 'sigp0', 'sigp',
                         'Sk0', 'As0', 'sig0', 'svdtheta', 'svddspr', 'fp', 'udm', 'vdm', 'ud_ssm', 'sig']
             ds = ds.drop_vars(vars2drop, errors='ignore')
             

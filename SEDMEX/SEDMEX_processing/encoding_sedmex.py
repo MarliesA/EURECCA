@@ -11,12 +11,13 @@ def encoding_sedmex(ds):
         encoding[var] = dict(zlib=True, complevel=5, dtype='int16', scale_factor=1, _FillValue=-9999)
     for var in ['snr1', 'snr2', 'snr3', 'heading', 'pitch', 'roll']:
         encoding[var] = dict(zlib=True, complevel=5, dtype='int16', scale_factor=0.1, _FillValue=-9999)
-    for var in ['sf', 'h', 'hpres', 'io', 'zi', 'zip', 'elevp', 'elev', 'd']:
+    for var in ['sf', 'h', 'hpres', 'io', 'zi', 'zip', 'elevp', 'elev', 'd', 'zb']:
         encoding[var] = dict(zlib=True, complevel=5, dtype='int16', scale_factor=0.01, _FillValue=-9999)
     for var in ['p', 'eta']:
         encoding[var] = dict(zlib=True, complevel=5, dtype='int32', scale_factor=0.001, _FillValue=-9999)
-    for var in ['u', 'v', 'w', 'uang', 'umag', 'Hm0', 'Tp', 'Tm01', 'Tm02', 'Tmm10', 'Tps', 'puvdir', 'dspr', 'u_ssm', 'ucm', 'ulm', 'Sk', 'As', 'sig', 'zs', 'k', 'Ur', 'nAs', 'nSk' ]:
-        encoding[var] = dict(zlib=True, complevel=5, dtype='int16', scale_factor=0.0001, _FillValue=-9999)
+    for var in ['u', 'v', 'w', 'uang', 'umag', 'Hm0', 'Tp', 'Tm01', 'Tm02', 'Tmm10', 'Tps','puvdir', 'dspr',  'u_ssm', 'ucm', 'ulm', 'Sk', 'As', 'sig', 'Skp', 'Asp', 'sigp', 'zs', 'k', 'Ur']:
+        encoding[var] = dict(zlib=True, complevel=5, dtype='int32', scale_factor=0.0001, _FillValue=-9999)
+
 
     # return only the subset on variables that are actually on the dataset
     encoding_sedmex = {var: encoding[var] for var in encoding if var in ds.data_vars}

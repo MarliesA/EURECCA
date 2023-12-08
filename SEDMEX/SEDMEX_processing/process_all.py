@@ -19,12 +19,12 @@ fp = r'c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing'
 if __name__ == "__main__":
 
     script_list = [
-        "read_store_raw_data.py",
-        "quality_control_adv.py",
-        "quality_control_solos.py",
-        "quality_control_ossis.py",
-        "quality_control_ADCP.py",
-        "tailored_timeseries_pressure.py",
+    #    "read_store_raw_data.py",
+    #    "quality_control_adv.py",
+    #    "quality_control_solos.py",
+    #    "quality_control_ossis.py",
+    #    "quality_control_ADCP.py",
+    #    "tailored_timeseries_pressure.py",
         "tailored_timeseries_adv.py",
         "tailored_timeseries_ADCP.py",
         # "reduce_tailored_timeseries.py"
