@@ -98,6 +98,7 @@ def compute_waves(instrument, config):
                 ds['Tm01'].attrs = {'units': 's', 'long_name': 'Tm01'}
                 ds['Tm02'].attrs = {'units': 's', 'long_name': 'Tm02'}
                 ds['Tmm10'].attrs = {'units': 's', 'long_name': 'T_{m-1,0}'}
+                ds['Tps'].attrs = {'units': 's', 'long_name': 'Tps', 'comment': 'smoothed peak wave period'}
                 ds['fp'] = 1 / ds.Tp
             else:
                 ds['fp'] = ds.puv.get_peak_frequency('u', fpmin=config['tailoredWaveSettings']['fmin'])
@@ -105,7 +106,7 @@ def compute_waves(instrument, config):
 
             ds['fp'].attrs = {'units': 'Hz', 'long_name': 'peak frequency'}
             ds['Tp'].attrs = {'units': 's', 'long_name': 'Tp'}
-            ds['Tps'].attrs = {'units': 's', 'long_name': 'Tps', 'comment': 'smoothed peak wave period'}
+            
             ##########################################################################
             # wave direction and directional spread
             ##########################################################################
