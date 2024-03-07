@@ -111,7 +111,7 @@ def disper_cur(w,h,u,g=9.8):
             print('not converged: too strong opposing current')
             return g/(4*u**2)
             
-    print('k = {} m-1 in {} iterations'.format(k,count))       
+    #print('k = {} m-1 in {} iterations'.format(k,count))       
     return k   
 
 def Ursell(hm0, k, d):
@@ -944,7 +944,7 @@ def compute_wave_params(fx,vy,S=None,theta=None,fmin=0.01,fmax = 1.5,
     Tp    = 1/fp # peak period
 
     # smoothes peak wave period
-    if em > 0:
+    if em > 0 and em<len(vsel):
         fps, _ = _calcParabolaVertex(fsel[em-1], vsel[em-1], fsel[em], vsel[em], fsel[em+1], vsel[em+1])
         Tps = 1 / fps  # smoothed peak period
     else:

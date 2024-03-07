@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from sedmex_info_loaders import get_githash
+from encoding_sedmex import encoding_sedmex
+from datetime import datetime
 
 def cast_to_blocks(ds, sf, burstDuration):
 
@@ -87,13 +89,20 @@ if __name__ == "__main__":
                 ds2['p'].loc[dict(t=ds2.t[(ds2.t > tstart) & (ds2.t < tstop)])] = \
                     ds2['p'].loc[dict(t=ds2.t[(ds2.t > tstart) & (ds2.t < tstop)])] + offset*rhog
 
-        ds2['p'].attrs = {'units': 'Pa +NAP', 'long_name': 'pressure', 'comments': 'corrected for drift air pressure'}
+        # ML: changed after rebuttal according to Martins
+        ds2['p'] = ds2.p/rhog
+        ds2['p'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic surface elevation', 'comments': 'corrected for drift air pressure and referenced to NAP'}
         ds2['h'].attrs = {'units': 'm', 'long_name': 'instrument height above bed', 'comment': 'neg down'}
-        ds2['zb'].attrs = {'units': 'm+NAP', 'long_name': 'bed level', 'comment': 'neg down'}
+        ds2['zb'].attrs = {'units': 'm+NAP', 'long_name': 'bed level'}
         ds2['zi'].attrs = {'units': 'm+NAP', 'long_name': 'instrument position'}
 
+        ds2['sf'].attrs = {'units': 'Hz', 'long_name': 'sampling frequency'}  # to be added
+        ds2['N'].attrs = {'units': 's', 'long_name': 'block local time'}  # to be added 
+        ds2['t'].attrs = {'long_name': 'block start time'}  # to be added 
+
         ds2.attrs = ds.attrs
-        ds2.attrs['summary'] = 'SEDMEX field campaign, pressure corrected for air pressure. There are inconsistencies between de mean pressure measured with ossis and solos.'
+        ds2.attrs['construction datetime'] = datetime.now().strftime("%d-%b-%Y (%H:%M:%S)")
+        ds2.attrs['summary'] = 'SEDMEX field campaign: quality checked pressure data. Corrected for air pressure and referenced to NAP' 
 
         # saving to file
         outFolder = os.path.join(config['experimentFolder'], instr, 'qc')
@@ -102,14 +111,9 @@ if __name__ == "__main__":
         ncFilePath = os.path.join(outFolder, '{}.nc'.format(instr))
 
         # add script version information
-        ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
-        ds.attrs['git hash'] = get_githash()
+        ds2.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
+        ds2.attrs['git hash'] = get_githash()
 
-        # if nothing else, at least specify lossless zlib compression
-        comp = dict(zlib=True, complevel=5)
-        ds.encoding = {var: comp for var in ds.data_vars}
-        for coord in list(ds.coords.keys()):
-            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
-
-        ds2.to_netcdf(ncFilePath, encoding=ds2.encoding )
+        encoding = encoding_sedmex(ds2)
+        ds2.to_netcdf(ncFilePath, encoding=encoding )
 

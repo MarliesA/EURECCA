@@ -7,12 +7,13 @@ import glob
 from datetime import datetime
 import yaml
 from pathlib import Path
-from vector import Vector
-from solo import Solo
-from ossi import Ossi
-from profiler import Profiler
-import sontek
+from ..modules.vector import Vector
+from ..modules.solo import Solo
+from ..modules.ossi import Ossi
+from ..modules.profiler import Profiler
+from ..modules import sontek 
 from sedmex_info_loaders import load_instrument_information, add_positioning_info, get_githash
+from encoding_sedmex import encoding_sedmex
 
 def load_solo_data(config):
 
@@ -55,13 +56,9 @@ def load_solo_data(config):
         ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
         ds.attrs['git hash'] = get_githash()
 
-        # if nothing else, at least specify lossless zlib compression
-        comp = dict(zlib=True, complevel=5)
-        ds.encoding = {var: comp for var in ds.data_vars}
-        for coord in list(ds.coords.keys()):
-            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
-
-        ds.to_netcdf(os.path.join(ncOutDir, instrument + '.nc'), encoding = ds.encoding)
+        # write to file
+        encoding = encoding_sedmex(ds)
+        ds.to_netcdf(os.path.join(ncOutDir, instrument + '.nc'), encoding = encoding)
 
     return
 
@@ -86,13 +83,8 @@ def load_ossi_data(config):
         ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
         ds.attrs['git hash'] = get_githash()
 
-        # if nothing else, at least specify lossless zlib compression
-        comp = dict(zlib=True, complevel=5)
-        ds.encoding = {var: comp for var in ds.data_vars}
-        for coord in list(ds.coords.keys()):
-            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
-
-        ds.to_netcdf(ncFilePath, encoding=ds.encoding)
+        encoding = encoding_sedmex(ds)
+        ds.to_netcdf(ncFilePath, encoding=encoding)
 
     return
 def vector_read_write_to_netcdf(instrument, experimentFolder, dataPath, isxy, tstart=None, tstop=None):
@@ -139,8 +131,9 @@ def vector_read_write_to_netcdf(instrument, experimentFolder, dataPath, isxy, ts
 
         # add global attribute metadata
         ds.attrs = {
-            'Conventions': 'CF-1.6',
-            'name': '{}'.format(instrument),
+            'conventions': 'CF-1.6',
+            'dataset': 'The SEDMEX campaign aims to gain new insights into the driving processes behind sheltered-beach morphodynamics. Field measurements from were conducted September - October 2021 at the Prins Hendrik Zanddijk: a man-made beach on the leeside of the barrier island Texel, bordering the Marsdiep basin that is part of the Dutch Wadden Sea. This data set consists of current, wave and turbidity measurements from a dense cross-shore array, a sparser 3-km alongshore array and a deep water wave buoy.',
+            'summary': 'SEDMEX field campaign: raw ADV data',
             'instrument': '{}'.format(instrument),
             'instrument serial number': '{}'.format(isxy[instrument]['serial number']),
             'epsg': 28992,
@@ -158,12 +151,7 @@ def vector_read_write_to_netcdf(instrument, experimentFolder, dataPath, isxy, ts
         ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
         ds.attrs['git hash'] = get_githash()
 
-        # specify compression for all the variables to reduce file size
-        # if nothing else, at least specify lossless zlib compression
-        comp = dict(zlib=True, complevel=5)
-        ds.encoding = {var: comp for var in ds.data_vars}
-        for coord in list(ds.coords.keys()):
-            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
+        encoding = encoding_sedmex(ds)
 
         # save to netCDF
         fold = os.path.join(experimentFolder, instrument, 'raw_netcdf')
@@ -173,7 +161,7 @@ def vector_read_write_to_netcdf(instrument, experimentFolder, dataPath, isxy, ts
             ds.name,
             ds.t.isel(t=0).dt.strftime('%Y%m%d').values
         ))
-        ds.to_netcdf(ncFilePath, encoding=ds.encoding)
+        ds.to_netcdf(ncFilePath, encoding=encoding)
 
     else:
 
@@ -185,6 +173,7 @@ def vector_read_write_to_netcdf(instrument, experimentFolder, dataPath, isxy, ts
                 tstart=blockStartTime,
                 tstop=blockStartTime + np.timedelta64(1, 'D'))
     return
+
 def load_vector_data(config):
 
     isxy = load_instrument_information(config['experimentFolder'])
@@ -273,8 +262,9 @@ def load_sontek_data(config):
 
             # add global attribute metadata
             ds.attrs = {
-                'Conventions': 'CF-1.6',
-                'name': '{}'.format(instrument),
+                'conventions': 'CF-1.6',
+                'dataset': 'The SEDMEX campaign aims to gain new insights into the driving processes behind sheltered-beach morphodynamics. Field measurements from were conducted September - October 2021 at the Prins Hendrik Zanddijk: a man-made beach on the leeside of the barrier island Texel, bordering the Marsdiep basin that is part of the Dutch Wadden Sea. This data set consists of current, wave and turbidity measurements from a dense cross-shore array, a sparser 3-km alongshore array and a deep water wave buoy.',
+                'summary': 'SEDMEX field campaign: raw ADV data',
                 'instrument': '{}'.format(instrument),
                 'instrument serial number': '{}'.format(isxy[instrument]['serial number']),
                 'epsg': 28992,
@@ -295,13 +285,8 @@ def load_sontek_data(config):
             ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
             ds.attrs['git hash'] = get_githash()
 
-            # specify compression for all the variables to reduce file size
-            comp = dict(zlib=True, complevel=5)
-            ds.encoding = {var: comp for var in ds.data_vars}
-            for coord in list(ds.coords.keys()):
-                ds.encoding[coord] = {'zlib': False, '_FillValue': None}
-
-            ds.to_netcdf(os.path.join(outfolder, rawdatafilenumber + '.nc'), encoding=ds.encoding)
+            encoding = encoding_sedmex(ds)
+            ds.to_netcdf(os.path.join(outfolder, rawdatafilenumber + '.nc'), encoding=encoding)
 
     return
 
@@ -334,8 +319,10 @@ def load_ADCP_data(config):
 
             # add global attribute metadata
             ds.attrs = {'Conventions': 'CF-1.6',
+                        'instrument': conf['name'],
+                        'dataset': 'The SEDMEX campaign aims to gain new insights into the driving processes behind sheltered-beach morphodynamics. Field measurements from were conducted September - October 2021 at the Prins Hendrik Zanddijk: a man-made beach on the leeside of the barrier island Texel, bordering the Marsdiep basin that is part of the Dutch Wadden Sea. This data set consists of current, wave and turbidity measurements from a dense cross-shore array, a sparser 3-km alongshore array and a deep water wave buoy.',
                         'title': '{}'.format('HR Profiler part ' + i),
-                        'summary': 'SEDMEX field campaign, part ' + i,
+                        'summary': 'SEDMEX field campaign: raw ADCP data',
                         'contact person': 'Marlies van der Lugt',
                         'emailadres': 'm.a.vanderlugt@tudelft.nl',
                         'version comments': 'constructed with xarray'}
@@ -344,11 +331,7 @@ def load_ADCP_data(config):
             ds.attrs['git repo'] = r'https://github.com/MarliesA/EURECCA/tree/main/sedmex'
             ds.attrs['git hash'] = get_githash()
 
-            # specify compression for all the variables to reduce file size
-            comp = dict(zlib=True, complevel=5)
-            ds.encoding = {var: comp for var in ds.data_vars}
-            for coord in list(ds.coords.keys()):
-                ds.encoding[coord] = {'zlib': False, '_FillValue': None}
+            encoding = encoding_sedmex(ds)
 
             # save to netCDF
             fold = os.path.join(config['experimentFolder'], instrument, 'raw_netcdf')
@@ -356,7 +339,7 @@ def load_ADCP_data(config):
                 os.mkdir(fold)
             ncFilePath = os.path.join(fold, 'part' + i + '.nc')
 
-            ds.to_netcdf(ncFilePath, encoding=ds.encoding)
+            ds.to_netcdf(ncFilePath, encoding=encoding)
 
     if 'L4C1ADCP' in config['instruments']['adcp']:
         # ADCP L4C1
@@ -384,8 +367,9 @@ def load_ADCP_data(config):
 
             # add global attribute metadata
             ds.attrs = {'Conventions': 'CF-1.6',
+                        'dataset': 'The SEDMEX campaign aims to gain new insights into the driving processes behind sheltered-beach morphodynamics. Field measurements from were conducted September - October 2021 at the Prins Hendrik Zanddijk: a man-made beach on the leeside of the barrier island Texel, bordering the Marsdiep basin that is part of the Dutch Wadden Sea. This data set consists of current, wave and turbidity measurements from a dense cross-shore array, a sparser 3-km alongshore array and a deep water wave buoy.',
                         'title': '{}'.format('HR Profiler part ' + i),
-                        'summary': 'SEDMEX field campaign, part ' + i,
+                        'summary': 'SEDMEX field campaign: raw ADCP data',
                         'contact person': 'Marlies van der Lugt',
                         'emailadres': 'm.a.vanderlugt@tudelft.nl',
                         'version comments': 'constructed with xarray'}
@@ -395,10 +379,7 @@ def load_ADCP_data(config):
             ds.attrs['git hash'] = get_githash()
 
             # specify compression for all the variables to reduce file size
-            comp = dict(zlib=True, complevel=5)
-            ds.encoding = {var: comp for var in ds.data_vars}
-            for coord in list(ds.coords.keys()):
-                ds.encoding[coord] = {'zlib': False, '_FillValue': None}
+            encoding = encoding_sedmex(ds)
 
             # save to netCDF
             fold = os.path.join(config['experimentFolder'], instrument, 'raw_netcdf')
@@ -406,7 +387,7 @@ def load_ADCP_data(config):
                 os.mkdir(fold)
             ncFilePath = os.path.join(fold, 'part' + i + '.nc')
 
-            ds.to_netcdf(ncFilePath, encoding=ds.encoding)
+            ds.to_netcdf(ncFilePath, encoding=encoding)
 
     return
 
