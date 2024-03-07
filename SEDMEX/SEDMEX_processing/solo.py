@@ -41,8 +41,9 @@ def Solo(instrumentName, experimentFolder, datafile, isxy, sf, jasave=True):
    
     # add global attribute metadata
     ds.attrs = {
-       'Conventions': 'CF-1.6',
-       'name': '{}'.format(instrumentName),
+       'conventions': 'CF-1.6',
+       'dataset': 'The SEDMEX campaign aims to gain new insights into the driving processes behind sheltered-beach morphodynamics. Field measurements from were conducted September - October 2021 at the Prins Hendrik Zanddijk: a man-made beach on the leeside of the barrier island Texel, bordering the Marsdiep basin that is part of the Dutch Wadden Sea. This data set consists of current, wave and turbidity measurements from a dense cross-shore array, a sparser 3-km alongshore array and a deep water wave buoy.',
+       'summary': 'SEDMEX field campaign: raw pressure data',
        'instrument': '{}'.format(instrumentName),
        'instrument type': 'Ruskin RBR Solo',
        'instrument serial number': '{}'.format(isxy[instrumentName]['serial number']),

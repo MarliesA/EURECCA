@@ -40,7 +40,7 @@ def cast_to_blocks(ds, sf, burstDuration):
 
 if __name__ == "__main__":
 
-    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    config = yaml.safe_load(Path('c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing\sedmex-processing.yml').read_text())
 
     # air pressure
     dsCtd = xr.open_dataset(config['experimentFolder'] + r'\L2C1CTD\raw_netcdf\L2C1CTD_20210910.nc')

@@ -141,7 +141,7 @@ class Profiler(object):
             self.z = self.zi+self.blankingDistance+np.arange(0,self.nCells)*self.cellSize             
         
         #construct burst axis
-        self.N = np.arange(0,self.nSampBurst)*self.samplingFrequency # in seconds
+        self.N = np.arange(0,self.nSampBurst)/self.samplingFrequency # in seconds
         
     def read_hr_profiler_burstsample_data(self,fileName):
         '''

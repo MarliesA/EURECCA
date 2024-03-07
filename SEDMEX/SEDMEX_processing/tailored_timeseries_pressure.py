@@ -7,7 +7,11 @@ import numpy as np
 from datetime import datetime
 from ..modules import puv
 from sedmex_info_loaders import get_githash
+<<<<<<< HEAD
 from ..modules import xrMethodAccessors
+=======
+import xrMethodAccessors
+>>>>>>> 9fd7e8a96eb2d4c102a99236399514a9c1c04e49
 from encoding_sedmex import encoding_sedmex
 
 def compute_waves(instr, config):
@@ -121,7 +125,7 @@ def compute_waves(instr, config):
 
 if __name__ == "__main__":
 
-    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    config = yaml.safe_load(Path('c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing\sedmex-processing.yml').read_text())
 
     # loop over all sonteks and adv's
     allInstr = []

@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime
 import xarray as xr
 from sedmex_info_loaders import get_githash
-
+from encoding_sedmex import encoding_sedmex
 
 config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
 def combine_ncs(instrument, config):
@@ -39,18 +39,13 @@ if __name__ == "__main__":
         print(instrument)
 
         if 'SOLO' in instrument or 'OSSI' in instrument:
-
             ds = xr.open_dataset(os.path.join(config['experimentFolder'], instrument, 'tailored', instrument + '.nc'))
             ds = ds.drop_dims(['f', 'N'], errors='ignore')
-            # update the summary
-            ds.attrs['summary'] = 'tailored timeseries of wave statistics'
         else:
             # only keep coord t and merge all days
             ds = combine_ncs(instrument, config)
-            # update the summary
-            ds.attrs['summary'] = 'tailored timeseries of wave and current statistics'
 
-        # on the repository we only publish the most relevant parameters, so drop the others
+        # on the repository we only publish the most relevant parameters, so drop the others if present still on ds
         vars2drop = ['Skc', 'Asc', 'sigc', 'Skl', 'Asl', 'sigl', 'Skp0', 'Asp0', 'sigp0', 'Skp', 'Asp', 'sigp',
                      'Sk0', 'As0', 'sig0', 'svdtheta', 'svddspr', 'fp', 'udm', 'vdm', 'ud_ssm']
 
@@ -79,10 +74,7 @@ if __name__ == "__main__":
         ds.attrs['git hash'] = get_githash()
 
         # update compression for all the variables to reduce file size
-        comp = dict(zlib=True, complevel=5)
-        ds.encoding = {var: comp for var in ds.data_vars}
-        for coord in list(ds.coords.keys()):
-            ds.encoding[coord] = {'zlib': False, '_FillValue': None}
+        encoding = encoding_sedmex(ds)
 
-        fileOut = os.path.join(config['experimentFolder'], instrument, 'tailored', 'tailored_' + instrument + '.nc')
-        ds.to_netcdf(fileOut, encoding=ds.encoding)
+        fileOut = os.path.join(config['experimentFolder'], instrument, 'tailored_' + instrument + '.nc')
+        ds.to_netcdf(fileOut, encoding=encoding)

@@ -6,7 +6,11 @@ import numpy as np
 import xarray as xr
 from datetime import datetime
 from sedmex_info_loaders import get_githash
+<<<<<<< HEAD
 from ..modules import xrMethodAccessors
+=======
+import xrMethodAccessors
+>>>>>>> 9fd7e8a96eb2d4c102a99236399514a9c1c04e49
 from encoding_sedmex import encoding_sedmex
 
 def compute_waves(instrument, config):
@@ -98,6 +102,7 @@ def compute_waves(instrument, config):
                 ds['Tm01'].attrs = {'units': 's', 'long_name': 'Tm01'}
                 ds['Tm02'].attrs = {'units': 's', 'long_name': 'Tm02'}
                 ds['Tmm10'].attrs = {'units': 's', 'long_name': 'T_{m-1,0}'}
+                ds['Tps'].attrs = {'units': 's', 'long_name': 'Tps', 'comment': 'smoothed peak wave period'}
                 ds['fp'] = 1 / ds.Tp
             else:
                 ds['fp'] = ds.puv.get_peak_frequency('u', fpmin=config['tailoredWaveSettings']['fmin'])
@@ -105,7 +110,11 @@ def compute_waves(instrument, config):
 
             ds['fp'].attrs = {'units': 'Hz', 'long_name': 'peak frequency'}
             ds['Tp'].attrs = {'units': 's', 'long_name': 'Tp'}
+<<<<<<< HEAD
             ds['Tps'].attrs = {'units': 's', 'long_name': 'Tps', 'comment': 'smoothed peak wave period'}
+=======
+            
+>>>>>>> 9fd7e8a96eb2d4c102a99236399514a9c1c04e49
             ##########################################################################
             # wave direction and directional spread
             ##########################################################################
@@ -304,7 +313,11 @@ def compute_waves(instrument, config):
             ds['Skp'].attrs = {'units': '-', 'long_name': 'near-bed pressure skewness'}
 
             # we no longer need these:
+<<<<<<< HEAD
             vars2drop = ['Skc', 'Asc', 'sigc', 'Skl', 'Asl', 'sigl', 'Skp0', 'Asp0', 'sigp0', 'Skp', 'Asp', 'sigp',
+=======
+            vars2drop = ['Skc', 'Asc', 'sigc', 'Skl', 'Asl', 'sigl', 'Skp0', 'Asp0', 'sigp0', 'sigp',
+>>>>>>> 9fd7e8a96eb2d4c102a99236399514a9c1c04e49
                         'Sk0', 'As0', 'sig0', 'svdtheta', 'svddspr', 'fp', 'udm', 'vdm', 'ud_ssm', 'sig']
             ds = ds.drop_vars(vars2drop, errors='ignore')
             
@@ -324,7 +337,7 @@ def compute_waves(instrument, config):
 
 if __name__ == "__main__":
 
-    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    config = yaml.safe_load(Path('c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing\sedmex-processing.yml').read_text())
 
     # loop over all sonteks and adv's
     allVectors = []

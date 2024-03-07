@@ -362,12 +362,12 @@ class Vector(object):
         24   Dist from s.vol - end (Avg)      (mm)
         '''
 
-        tlist = []; dist1 = []; dist2 = []     
+        tlist = []; dist1 = []; dist2 = []  ; burst = []
         with open(self.vhdFile) as file: 
             for line in file:
                 parts = line.split()
                 tlist.append(parts[0:6])
-                # burst = parts[7]
+                # burst.append(parts[7])
                 # noise = [int(x) for x in parts[8:11]]
                 # noiseCor = [int(x) for x in parts[11:14]]
                 dist1.append(float(parts[18])) #mm
@@ -425,18 +425,22 @@ class Vector(object):
                           N=np.arange(0, blockLength)/self.frequency
                 ))
           
-        # also cast all other variables in the ds structure 
-        for var in ['u','v','w','anl1','anl2','a1','a2','a3',
+        # also cast all other variables in the ds structure
+
+
+        vars = ['u','v','w','anl1','anl2','a1','a2','a3',
                     'cor1','cor2','cor3',
                     'snr1','snr2','snr3',
                     'voltage',
-                    'heading','pitch','roll','burst']:
+                    'heading','pitch','roll']
+
+        for var in vars:
             tmp = self.dfpuv[var].values
             tmp = tmp[0:int(NB*blockLength)]
             ds[var] = (['t', 'N'], tmp.reshape(NB, int(N/NB)))
-           
-        ds['t'].attrs = {'long_name': 'burst start times'}
-        ds['N'].attrs = {'units': 's', 'long_name': 'time'}
+
+        ds['t'].attrs = {'long_name': 'burst start time'}
+        ds['N'].attrs = {'units': 's', 'long_name': 'burst local time'}
         ds['sf'].attrs = {'units': 'Hz', 'long_name': 'sampling frequency'}
         ds['p'].attrs = {'units': 'Pascal', 'long_name': 'pressure'}
         ds['u'].attrs = {'units': 'm/s', 'long_name': 'velocity 1 component'}
@@ -457,10 +461,17 @@ class Vector(object):
         ds['pitch'].attrs = {'units': 'deg', 'long_name': 'instrument pitch'}
         ds['roll'].attrs = {'units': 'deg', 'long_name': 'instrument roll'}
         ds['voltage'].attrs = {'units': 'V', 'long_name': 'battery voltage'}
-        ds['burst'].attrs = {'units': '-', 'long_name': 'burst number'}
+
+        if self.burstMode:
+            tmp = self.dfpuv['burst'].values
+            tmp = tmp[0:int(NB * blockLength)]
+            ds['burst'] = (['t', 'N'], tmp.reshape(NB, int(N / NB)))
+            ds['burst'].attrs = {'units': '-', 'long_name': 'burst number'}
+
+
         self.ds = ds       
         
-    def compute_block_averages(self):   
+    def compute_block_averages(self):
          '''
          computes some first block averages, specifically average pressure, 
          water level and water depth on the xarray Dataset

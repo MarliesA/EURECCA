@@ -104,7 +104,7 @@ def qc_this_rawdatafile(instrument, heading, part, config):
         ds['p'] = ds['pc'] / config['physicalConstants']['rho'] / config['physicalConstants']['g']
         ds['p'].attrs = {'units': 'm+NAP', 'long_name': 'hydrostatic surface elevation', 'comments': 'corrected for drift air pressure and referenced to NAP'}
 
-        ds['d'] = ds.eta.mean(dim='N') - ds.zb
+        ds['d'] = ds.p.mean(dim='N') - ds.zb
         ds['d'].attrs = {'units': 'm ', 'long_name': 'water depth'}
 
 
@@ -186,7 +186,7 @@ def qc_this_rawdatafile(instrument, heading, part, config):
 
 if __name__ == "__main__":
 
-    config = yaml.safe_load(Path('sedmex-processing.yml').read_text())
+    config = yaml.safe_load(Path('c:\checkouts\eurecca_rebuttal\SEDMEX\SEDMEX_processing\sedmex-processing.yml').read_text())
 
     if 'L2C7ADCP' in config['instruments']['adcp']:
         instrument = 'L2C7ADCP'
