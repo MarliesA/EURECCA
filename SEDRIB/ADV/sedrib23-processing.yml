@@ -1,0 +1,39 @@
+# PHZD data processing configuration file
+# Marlies van der Lugt - 202301019
+---
+experimentFolder: //tudelft.net/staff-umbrella/EURECCA/fieldvisits/20231101_ripples_frame
+instruments:
+    adv:
+        vector:
+        - vec008
+samplingFrequency:
+    vector: 16
+physicalConstants:
+    g: 9.8
+    rho: 1028
+beachOrientation:           # direction of shore-normal (cartesian convention)
+    vec008: 122
+burstDuration:
+    vector: 1800
+qcADVSettings:
+    uLim: 2.1
+    vLim: 2.1               # maximum valid velocity in v-direction  
+    wLim: 0.6               # maximum valid velocity in w-direction  
+    corTreshold: 70         # minimum intra-beam correlation for valid sample
+    ampTreshold: 10         # minimum return amplitude for valid sample
+    snrLim: 5
+    maxGap: 8              # max no. consecutive nans in timeseries  
+    maxFracNans: 0.05      # max % outliers for valid timeseries
+    waterHeadMargin: 0.05  # m of water head above instrument for valid timeseries
+    outlierCrit: 3 
+tailoredWaveSettings:
+    fresolution: 
+        vector: 0.03125
+    thetaresolution: 5     # deg
+    fmin: 0.05
+    fmax: 1.0
+    fmax_ss: 8
+    fmax_skas0: 1
+    
+    
+    
