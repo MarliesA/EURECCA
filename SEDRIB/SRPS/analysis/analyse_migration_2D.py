@@ -1,21 +1,11 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import xarray as xr
 import scipy as sc
 import glob
 import os
 from scipy import signal
 
-figdir = r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\movmean_footprint2\migration'
-if not (os.path.exists(figdir)):
-    os.mkdir(figdir)
-
-######################################################################
-# code to reconstruct these myself
-######################################################################
-
-plt.ioff()
 jacorrectplane = True
 jawindow = True
 philist = []
@@ -27,7 +17,9 @@ percvalid1 = []
 percvalid2 = []
 
 # my own processing
-scanz = glob.glob(r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\movmean_footprint2\data\*')
+fold = r'\\tudelft.net\staff-umbrella\EURECCA\DataCiaran\data'
+scanz = glob.glob(os.path.join(fold, 'SRPS', 'qc_2D', '*.mat'))
+
 for file1, file2 in zip(scanz[:-1], scanz[1:]):
     time1 = pd.to_datetime(file1.split('\\')[-1][:-4], format='%H%M%d%m%Y') 
     time2 = pd.to_datetime(file2.split('\\')[-1][:-4], format='%H%M%d%m%Y') 
@@ -131,8 +123,6 @@ ds['tprev'] = (('time'), np.array([time1list[i] for i in isort]))
 ds['percvalid1'] = (('time'), np.array([percvalid1[i] for i in isort]))
 ds['percvalid2'] = (('time'), np.array([percvalid2[i] for i in isort]))
 
-ds.to_netcdf(r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\processed\movmean_footprint2_stats2D_jawindow1_migrationrates.nc')
-
-a=1
+ds.to_netcdf(os.path.join(fold, 'SRPS', 'tailored', 'migrationrates2D.nc'))
 
 

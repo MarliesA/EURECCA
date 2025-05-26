@@ -1,28 +1,16 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import xarray as xr
 import scipy as sc
 import glob
-import matplotlib.dates as mdates
 import os
 from scipy.interpolate import interp1d
 from local_functions import spectrum_simple_1D
-import matplotlib.dates as mdates
 import warnings
 from scipy import signal
 
-major_locator = mdates.AutoDateLocator(minticks=3, maxticks=7)
-formatter = mdates.ConciseDateFormatter(major_locator)
-
 jawindow = False
 lf = 4
-variant = 'movmean_jawindow0_lf4_excludesmallk_ls5' 
-
-figdir = os.path.join(r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\movmean_footprint2\1d_analysis', variant)
-if not(os.path.exists(figdir)):
-    os.mkdir(figdir)
-    os.mkdir(os.path.join(figdir, 'comp1d2d'))
 
 # #######################################################################
 # # find ripple geometry from individual swaths
@@ -33,13 +21,14 @@ Hsl = []
 Lpl = []
 phil = []
 
-scanz = glob.glob(r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\data\*')
+fold = r'\\tudelft.net\staff-umbrella\EURECCA\DataCiaran\data'
+scanz = glob.glob(os.path.join(fold, 'SRPS', 'qc_1D', '*.mat'))
 
 theta = -np.linspace(-45,45,51)
 Lp = np.zeros([len(scanz), 51])
 Hs = np.zeros([len(scanz), 51])
 time = []
-plt.ioff()
+
 for ifile, file in enumerate(scanz):
     t = pd.to_datetime(file.split('\\')[-1][:-4], format='%H%M%d%m%Y') 
     print(t)
@@ -47,17 +36,12 @@ for ifile, file in enumerate(scanz):
 
     dat = sc.io.loadmat(file)
     xBed = dat['data05'][0]['xBed'][0]
-    thet = dat['data05'][0]['THrot'][0]
     zBed = dat['data05'][0]['zBed'][0]
 
     xb = np.arange(-0.9, 0.9, 0.01)
 
-    figpath = os.path.join(figdir, str(t).replace(':','_').replace(' ', '_') )
-    if not(os.path.exists(figpath)):
-        os.mkdir(figpath)
-
-    # voor 50 graden elke kant tov kustnormaal zoek de golfperiode en golfhoogte
-    # implementatie nu is: central bin is 24 dus eerste 51 
+    # find ripple wave length and height for a sector of 50 degrees on each side of shore normal
+    # implementatation now is: central bin is 24, therefore first is 51st index 
     for ithet, itheta in enumerate(range(1, 51)):
 
         # 
@@ -144,7 +128,7 @@ ds['thetmin'] = ds2['thetmin']
 ds['labdamin'] = ds2['labda']
 ds['etamin'] = ds2['eta']
 
-ds.to_netcdf(os.path.join(r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\processed', variant + '.nc'))
+ds.to_netcdf(os.path.join(fold, 'SRPS', 'tailored', 'geometrystats1D.nc'))
 
 
 

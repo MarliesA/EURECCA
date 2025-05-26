@@ -1,3 +1,8 @@
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+
 def psi(uorb, d50, delta=1.65, g=9.8):
     """
     mobility number Psi
@@ -7,6 +12,10 @@ def psi(uorb, d50, delta=1.65, g=9.8):
 
 def nu(Temp=10):
     return 4e-05 / (20 + Temp)
+
+def fw_swart(Tmm10, u_orb, d50=300e-6):
+    A = Tmm10*u_orb/2/np.pi # representative semi-excursion  # after Soulsby 1997 p. 77
+    return np.exp(5.213*(2.5*d50/A)**0.194-5.977) # Swart 1974, as in Masselink 2007
 
 def uz(uf, z, f=0.02, d50=0.0002, z0=0.0025, kappa=0.4, Tmm10=[], u_orb=[]):
     """ 
@@ -238,7 +247,6 @@ def shields_parameter_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1000, option
 
 def bedload_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1025, nu=1e-06, option=1, m=11, n=1.65, total_excess_shields=False):
     if total_excess_shields:
-        print('hi')
         theta_prime_c = shields_parameter_ribberink98(ds, d50, g=g, rho_s=rho_s, rho_w=rho_w, option=41)
         theta_prime_l = shields_parameter_ribberink98(ds, d50, g=g, rho_s=rho_s, rho_w=rho_w, option=42)
         theta_prime_mag = np.sqrt(theta_prime_c ** 2 + theta_prime_l ** 2)
@@ -258,7 +266,6 @@ def bedload_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1025, nu=1e-06, option
     return T * np.sqrt((rho_s - rho_w) / rho_w * g * d50 ** 3)
 
 def spearman_stats(a, b):
-    import scipy.stats as stats
     dat = np.vstack([a, b]).T
     dat = dat[~np.isnan(dat).any(axis=-1)]
     r = stats.spearmanr(dat)

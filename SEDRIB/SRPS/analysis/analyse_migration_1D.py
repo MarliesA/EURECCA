@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import xarray as xr
@@ -5,38 +6,22 @@ import scipy as sc
 import glob
 from scipy import signal
 
-rib1d=xr.open_dataset(r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\processed\stats1D_window0_lf4.nc')
+fold = r'\\tudelft.net\staff-umbrella\EURECCA\DataCiaran\data'
+
+# load the 1D geometry 
+rib1d=xr.open_dataset(os.path.join(fold, 'SRPS', 'tailored', 'geometrystats1D.nc'))
 rib1dsel = rib1d.where(rib1d['theta']>-45).dropna(dim='time', subset=['labda'], how='all')
 argmin = rib1dsel.labda.argmin(dim='theta')
 rib1d['argmin'] = argmin
-thetmin = rib1dsel.theta[argmin]
 
+# make a time averaged ripple direction to inspect the migration in 1D within the ripple direction
 ridsel = rib1d.dropna(dim='time', subset=['labda'], how='all')
 ripple_dir = np.floor((ridsel.labda.argmin(dim='theta')).rolling(time=8, min_periods=6, center=True).median())
-
-etamin = []
-labdamin = []
-for it in range(len(rib1dsel.time)):
-    arg = ripple_dir[it]
-    if np.isnan(arg):
-        etamin.append(np.nan)
-        labdamin.append(np.nan)
-        continue
-    else:
-        arg = int(arg)
-        etamin.append(rib1dsel.isel(time=it).eta[arg])
-        labdamin.append(rib1dsel.isel(time=it).labda[arg])
-
-rib1dsel['labda'] = ('time', np.array(labdamin))
-rib1dsel['eta'] = ('time', np.array(etamin))
-rib1dsel['thetmin'] = thetmin # ('time', thetmin)
-rib1d['thetmin'] = rib1dsel['thetmin']
-rib1d['labdamin'] = rib1dsel['labda']
-rib1d['etamin'] = rib1dsel['eta']
 
 # remove unrealistic estimates of eta
 rib1d = rib1d.where(rib1d.etamin<0.25)
 
+# Now evaluate the migration
 jacorrectplane = True
 jawindow = True
 philist = []
@@ -45,7 +30,7 @@ dmiglist = []
 time1list = []
 time2list = []
 
-scanz = glob.glob(r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\data\*')
+scanz = glob.glob(os.path.join(fold, 'SRPS', 'qc_1D', '*.mat'))
 for file1, file2 in zip(scanz[:-1], scanz[1:]):
     time1 = pd.to_datetime(file1.split('\\')[-1][:-4], format='%H%M%d%m%Y') 
     time2 = pd.to_datetime(file2.split('\\')[-1][:-4], format='%H%M%d%m%Y') 
@@ -55,7 +40,6 @@ for file1, file2 in zip(scanz[:-1], scanz[1:]):
     time1list.append(time1)
     time2list.append(time2)
     print(time2)
-
 
     dat = sc.io.loadmat(file1)
     x1 = dat['data05'][0]['xBed'][0]
@@ -135,8 +119,6 @@ ds['phi'] = (('time'), np.array([philist[i] for i in isort]))
 ds['dmig'] = (('time'), np.array([dmiglist[i] for i in isort]))
 ds['tprev'] = (('time'), np.array([time1list[i] for i in isort]))
 
-ds.to_netcdf(r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\processed\stats1D_migrationrates_250114_refined5_avdir.nc')
-
-a=1
+ds.to_netcdf(os.path.join(fold, 'SRPS', 'tailored', 'migrationrates1D.nc'))
 
 
