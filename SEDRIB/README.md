@@ -1,7 +1,7 @@
 ------------------------------------
 ADV data:
 ------------------------------------
-Scripts provided for a) Conversion and combination of Nortek's ASCII output files into combined netcdf's in burst-block structure, b) quality controlling the timeseries of velocity, c) conversion of 16 Hz timeseries into 15-minute block flow and wave statistics.
+Scripts provided for a) Conversion and combination of Nortek's ASCII output files into combined netcdf's in burst-block structure, b) quality controlling the timeseries of velocity, c) conversion of 16 Hz timeseries into 15-minute block flow and wave statistics. Scripts for bispectral analysis were generated with help of the authors of De Bakker et al. (2015), and are not published here but available upon request.
 
 ------------------------------------
 ACVP data:
