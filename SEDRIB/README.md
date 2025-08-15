@@ -1,7 +1,7 @@
 ------------------------------------
 ADV data:
 ------------------------------------
-Scripts provided for a) debinarization of Nortek's proprietary .VEC format, b) quality controlling the timeseries of velocity, c) conversion of 16 Hz timeseries into 15-minute block flow and wave statistics.
+Scripts provided for a) Conversion and combination of Nortek's ASCII output files into combined netcdf's in burst-block structure, b) quality controlling the timeseries of velocity, c) conversion of 16 Hz timeseries into 15-minute block flow and wave statistics.
 
 ------------------------------------
 ACVP data:
