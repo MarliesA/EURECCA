@@ -4,9 +4,27 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import scipy as sc
 import glob
-import sys
-sys.path.append(r'C:\checkouts\\python\PhD\modules')
-from local_functions import estimate_slope_footprint
+
+def estimate_slope_footprint(x,y,z):
+
+    # crop to area between -0.5 and 0.5
+    ix = np.logical_and(np.logical_and(np.logical_and(x>-0.5, x<=0.5), y>-0.5), y<=0.5)
+    ns = int(np.sqrt(x[ix].shape)[0])
+    xc = x[ix].reshape([ns, ns])
+    yc = y[ix].reshape([ns, ns])
+    zc = z[ix].reshape([ns, ns])
+    ny, nx = zc.shape
+
+    # fill with mean
+    zc[np.isnan(zc)] = np.nanmean(zc)
+
+    # remove mean
+    zc -= np.nanmean(zc)
+
+    # planar detrend     
+    A = np.c_[xc.flatten(), yc.flatten(), np.ones(ny*nx)]
+    C,_,_,_ = sc.linalg.lstsq(A, zc.flatten())    # coefficients
+    return C
 
 # Script to inspect the slope directly underneath the ripple scanner (in the manuscript only mentioned within the text)
 
@@ -42,3 +60,8 @@ c2 = np.array([c[2] for c in Clist])
 fig, ax = plt.subplots()
 ax.plot(tlist, np.sqrt(c0**2+c1**2))
 ax.set_ylabel('slope [-]')
+
+bedslope = pd.DataFrame({'t':tlist, 'slope':np.sqrt(c0**2+c1**2), 'C0': c0, 'C1': c1, 'C2':c2});
+bedslope = bedslope.set_index('t').to_xarray()
+bedslope.to_netcdf(r'\\tudelft.net\staff-umbrella\EURECCA\DataCiaran\SRPS\tailored\bedslope.nc')
+a=1

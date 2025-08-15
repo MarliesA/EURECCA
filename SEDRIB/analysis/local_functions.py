@@ -71,9 +71,7 @@ def plot_migrating_moments(ax, alpha=0.2):
         axi.axvspan(pd.to_datetime('20231104 09:45'), pd.to_datetime('20231104 13:15'), alpha=alpha, ec=None, fc='red')
         axi.axvspan(pd.to_datetime('20231104 14:00'), pd.to_datetime('20231104 15:30'), alpha=alpha, ec=None, fc='green')
         axi.axvspan(pd.to_datetime('20231104 15:30'), pd.to_datetime('20231104 18:30'), alpha=alpha, ec=None, fc='grey')
-        axi.axvspan(pd.to_datetime('20231104 18:30'), pd.to_datetime('20231104 20:00'), alpha=alpha, ec=None, fc='red')
         axi.axvspan(pd.to_datetime('20231105 01:00'), pd.to_datetime('20231105 07:30'), alpha=alpha, ec=None, fc='red')
-        axi.axvspan(pd.to_datetime('20231105 19:30'), pd.to_datetime('20231105 20:30'), alpha=alpha, ec=None, fc='green')
         axi.axvspan(pd.to_datetime('20231106 17:00'), pd.to_datetime('20231106 20:00'), alpha=alpha, ec=None, fc='green')
         axi.axvspan(pd.to_datetime('20231107 07:00'), pd.to_datetime('20231107 08:00'), alpha=alpha, ec=None, fc='green')
         axi.axvspan(pd.to_datetime('20231107 18:15'), pd.to_datetime('20231107 21:00'), alpha=alpha, ec=None, fc='green')
@@ -207,13 +205,13 @@ def shields_parameter_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1000, option
     elif option == 34:
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ul2'] + ds['ulm']) ** 2) * (ds['ul2'] + ds['ulm']) / ((rho_s - rho_w) * g * d50)
-    elif option == 35:
+    elif option == 35: # not including any mean flow components
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc'] - ds['ucm']) ** 2) * (ds['uc'] - ds['ucm']) / ((rho_s - rho_w) * g * d50)
     elif option == 36:
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ul'] - ds['ulm']) ** 2) * (ds['ul'] - ds['ulm']) / ((rho_s - rho_w) * g * d50)
-    elif option == 37:
+    elif option == 37: # without the alongshore tide but including the total signal
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc'] ** 2) * ds['uc'] / ((rho_s - rho_w) * g * d50)
     elif option == 38:
@@ -225,7 +223,7 @@ def shields_parameter_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1000, option
     elif option == 40:
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ul2_ss'] + ds['ul2_ig']) ** 2) * (ds['ul2_ss'] + ds['ul2_ig']) / ((rho_s - rho_w) * g * d50)
-    elif option == 41:
+    elif option == 41: # excluding the return flow 
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc'] - ds['ucm']) ** 2) * (ds['uc'] - ds['ucm']) / ((rho_s - rho_w) * g * d50)
     elif option == 42:
@@ -237,15 +235,27 @@ def shields_parameter_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1000, option
     elif option == 44:
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ulm'] + 0 * ds['uc']) ** 2) * (ds['ulm'] + 0 * ds['uc']) / ((rho_s - rho_w) * g * d50)
-    elif option == 45:
+    elif option == 45: # only sea swell without cross-component
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc2_ss'] ** 2) * ds['uc2_ss'] / ((rho_s - rho_w) * g * d50)
     elif option == 46:
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul'] ** 2) * ds['ul'] / ((rho_s - rho_w) * g * d50)
+    elif option == 47:
+        fcw = fw_dash
+        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc2_ss']+ds['ucm_nb2']) ** 2) * (ds['uc2_ss']+ds['ucm_nb2']) / ((rho_s - rho_w) * g * d50)
+    elif option == 48:
+        fcw = fw_dash
+        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul'] ** 2) * ds['ul'] / ((rho_s - rho_w) * g * d50)
+    elif option == 49: # only sea swell with along ripple component included in cross-shore
+        fcw = fw_dash
+        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc2_ss']+ds['ucm3']) ** 2) * (ds['uc2_ss']+ds['ucm3']) / ((rho_s - rho_w) * g * d50)
+    elif option == 50:
+        fcw = fw_dash
+        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul'] ** 2) * ds['ul'] / ((rho_s - rho_w) * g * d50)
     return theta_prime
 
-def bedload_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1025, nu=1e-06, option=1, m=11, n=1.65, total_excess_shields=False):
+def bedload_ribberink98(ds, d50, dir='cross', g=9.8, rho_s=2650, rho_w=1025, nu=1e-06, option=1, m=11, n=1.5, total_excess_shields=False):
     if total_excess_shields:
         theta_prime_c = shields_parameter_ribberink98(ds, d50, g=g, rho_s=rho_s, rho_w=rho_w, option=41)
         theta_prime_l = shields_parameter_ribberink98(ds, d50, g=g, rho_s=rho_s, rho_w=rho_w, option=42)
@@ -262,7 +272,10 @@ def bedload_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1025, nu=1e-06, option
         theta_crit = critical_shields(d50, delta=(rho_s - rho_w) / rho_w, nu=nu, g=g, method='soulsby_whitehouse97')
         theta_eff = theta_prime_mag - theta_crit
         theta_eff = np.where(theta_eff > 0, theta_eff, 0)
-        T = m * (theta_eff ** n * theta_prime_c / theta_prime_mag).mean(dim='N')
+        if dir=='cross':
+            T = m * (theta_eff ** n * theta_prime_c / theta_prime_mag).mean(dim='N')
+        elif dir=='along':
+            T = m * (theta_eff ** n * theta_prime_l / theta_prime_mag).mean(dim='N')
     return T * np.sqrt((rho_s - rho_w) / rho_w * g * d50 ** 3)
 
 def spearman_stats(a, b):
