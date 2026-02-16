@@ -5,10 +5,10 @@ import xarray as xr
 import pandas as pd
 import matplotlib.pyplot as plt
 from acvp_functions import *
-folder = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20231101_ripples_frame\ublab-3c\dep1\raw_netcdf'
+folder = r'c:\checkouts\ublab-3c\dep1\raw_netcdf'
 filez = glob.glob(os.path.join(folder, '*.nc'))
 
-plotFilePath = r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\fig'
+plotFilePath = r'my\plot\path'
 
 # %%
 # time period under evaluation
@@ -22,7 +22,7 @@ snrmin = 2
 umlist = []; vmlist = []; wmlist = []; w2mlist = []; uurmlist = []; vurmlist = []; wurmlist = []; w2urmlist = []
 for file in filez[14:-3]:
     print(file)
-    ds = load_adcv_corrected(file, thet1=-30, thet2=0)  
+    ds = load_acvp_corrected(file, thet1=-30, thet2=0)  
 
     # compute mean velocities 
     um = ds.ur.where(ds.snr1>snrmin).where(ds.snr2>snrmin).coarsen(time=51*60*5, boundary='trim').mean()
@@ -57,7 +57,7 @@ ublab['w2urm'] = xr.concat(w2urmlist, dim='time')
 
 # %%
 # load the ADV data, rename the time dimension to align with the ACVP and crop to the analysis interval
-adv = xr.open_dataset(r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20231101_ripples_frame\vec008\tailored15min_uc2_v2\vec008.nc')
+adv = xr.open_dataset(r'c:\checkouts\dataCiaran\ADV\tailored\vec008.nc')
 adv = adv.rename({'t': 'time'}).sel(time=slice(ublab.time.min(), ublab.time.max()+pd.to_timedelta('2H')))
 
 # %%
@@ -76,7 +76,7 @@ minperfac  = 8
 z1list = []; z2list = []; z3list = []; z4list = [];
 
 for ifile in range(14, 19):
-    dsub = load_adcv_corrected(filez[ifile], thet1=-30, thet2=0) 
+    dsub = load_acvp_corrected(filez[ifile], thet1=-30, thet2=0) 
 
     z1 = dsub.z[ 
         dsub.v1

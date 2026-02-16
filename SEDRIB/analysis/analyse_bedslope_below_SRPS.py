@@ -32,7 +32,7 @@ Clist = []
 tlist = []
 
 # my own processing
-scanz = glob.glob(r'\\tudelft.net\staff-umbrella\EURECCA\Floris\vanMarlies\reconstruct\movmean_footprint2\data\*')
+scanz = glob.glob(r'c:\checkouts\dataCiaran\SRPS\qc_2D\*')
 
 for file in scanz:
     time = pd.to_datetime(file.split('\\')[-1][:-4], format='%H%M%d%m%Y') 
@@ -63,5 +63,5 @@ ax.set_ylabel('slope [-]')
 
 bedslope = pd.DataFrame({'t':tlist, 'slope':np.sqrt(c0**2+c1**2), 'C0': c0, 'C1': c1, 'C2':c2});
 bedslope = bedslope.set_index('t').to_xarray()
-bedslope.to_netcdf(r'\\tudelft.net\staff-umbrella\EURECCA\DataCiaran\SRPS\tailored\bedslope.nc')
+bedslope.to_netcdf(r'c:\checkouts\DataCiaran\SRPS\tailored\bedslope.nc')
 a=1

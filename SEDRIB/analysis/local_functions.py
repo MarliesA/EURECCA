@@ -71,7 +71,9 @@ def plot_migrating_moments(ax, alpha=0.2):
         axi.axvspan(pd.to_datetime('20231104 09:45'), pd.to_datetime('20231104 13:15'), alpha=alpha, ec=None, fc='red')
         axi.axvspan(pd.to_datetime('20231104 14:00'), pd.to_datetime('20231104 15:30'), alpha=alpha, ec=None, fc='green')
         axi.axvspan(pd.to_datetime('20231104 15:30'), pd.to_datetime('20231104 18:30'), alpha=alpha, ec=None, fc='grey')
+        # axi.axvspan(pd.to_datetime('20231104 18:30'), pd.to_datetime('20231104 20:00'), alpha=alpha, ec=None, fc='red')
         axi.axvspan(pd.to_datetime('20231105 01:00'), pd.to_datetime('20231105 07:30'), alpha=alpha, ec=None, fc='red')
+        # axi.axvspan(pd.to_datetime('20231105 19:30'), pd.to_datetime('20231105 20:30'), alpha=alpha, ec=None, fc='green')
         axi.axvspan(pd.to_datetime('20231106 17:00'), pd.to_datetime('20231106 20:00'), alpha=alpha, ec=None, fc='green')
         axi.axvspan(pd.to_datetime('20231107 07:00'), pd.to_datetime('20231107 08:00'), alpha=alpha, ec=None, fc='green')
         axi.axvspan(pd.to_datetime('20231107 18:15'), pd.to_datetime('20231107 21:00'), alpha=alpha, ec=None, fc='green')
@@ -80,174 +82,19 @@ def plot_migrating_moments(ax, alpha=0.2):
 
 def shields_parameter_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1000, option=1):
     """ 
-    option=1: waves only crossshore direction
-    option=2: waves only alongshore direction
-    option=3: vector addition of the stirring component, but transport only in cross direction
-    option=4: vector addition of the stirring component, but transport only in along direction
-    option=5: only cross-shore stirring component, and transport only in cross direction
-    option=6: only alongshore stirring component, and transport only in along direction
-    option=7: only cross-shore based on total velocity signal, and transport only in cross direction
-    option=8: only alongshore sbased on, and transport only in along direction      
-    option=9: only cross-shore based on total velocity signal**3, and transport only in cross direction
-    option=10: only alongshore based on total velocity signal**3, and transport only in along direction    
+    Various flaviours of velocity components that are used to compute bedload transport with Ribberink (1998)
+    option=7: Use the total velocity signal that is given as input argument (preprocessing of this signal possible)
+    option=49: Explicitly state the sea-swell component (uc2_ss) and the mean flow component (ucm3) that are included in the cross-shore, no IG variance included. In the alongshore include all components
     """
     A = ds['Tmm10'] * ds['ud_ssm'] / 2 / np.pi
     fw_dash = np.exp(5.213 * (2.5 * d50 / A) ** 0.194 - 5.977)
-    if option == 1:
-        theta_prime = 0.5 * rho_w * fw_dash * ds['uc_ss'] ** 2 * np.sign(ds['uc_ss']) / ((rho_s - rho_w) * g * d50)
-    elif option == 2:
-        theta_prime = 0.5 * rho_w * fw_dash * ds['ul_ss'] ** 2 * np.sign(ds['ul_ss']) / ((rho_s - rho_w) * g * d50)
-    elif option == 3:
-        fc = 0.0025
-        fw = fw_dash
-        alfa = ds['ud_ssm'] / (ds['ud_ssm'] + np.sqrt(ds['ucm'] ** 2 + ds['ulm'] ** 2))
-        fcw = alfa * fc + (1 - alfa) * fw
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc'] ** 2 + ds['ul'] ** 2) * (ds['ucm'] + ds['uc_ss']) / ((rho_s - rho_w) * g * d50)
-    elif option == 4:
-        fc = 0.0025
-        fw = fw_dash
-        alfa = ds['ud_ssm'] / (ds['ud_ssm'] + np.sqrt(ds['ucm'] ** 2 + ds['ulm'] ** 2))
-        fcw = alfa * fc + (1 - alfa) * fw
-        theta_prime = theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc'] ** 2 + ds['ul'] ** 2) * (ds['ulm'] + ds['ul_ss']) / ((rho_s - rho_w) * g * d50)
-    elif option == 5:
-        fc = 0.0025
-        fw = fw_dash
-        alfa = ds['ud_ssm'] / (ds['ud_ssm'] + np.sqrt(ds['ucm'] ** 2))
-        fcw = alfa * fc + (1 - alfa) * fw
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ucm'] + ds['uc_ss']) ** 2) * (ds['ucm'] + ds['uc_ss']) / ((rho_s - rho_w) * g * d50)
-    elif option == 6:
-        fc = 0.0025
-        fw = fw_dash
-        alfa = ds['ud_ssm'] / (ds['ud_ssm'] + np.sqrt(ds['ulm'] ** 2))
-        fcw = alfa * fc + (1 - alfa) * fw
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ulm'] + ds['ul_ss']) ** 2) * (ds['ulm'] + ds['ul_ss']) / ((rho_s - rho_w) * g * d50)
-    elif option == 7:
+   if option == 7:
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc'] ** 2) * ds['uc'] / ((rho_s - rho_w) * g * d50)
     elif option == 8:
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul'] ** 2) * ds['ul'] / ((rho_s - rho_w) * g * d50)
-    elif option == 9:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * ds['uc'] ** 3 / ((rho_s - rho_w) * g * d50)
-    elif option == 10:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * ds['ul'] ** 3 / ((rho_s - rho_w) * g * d50)
-    elif option == 11:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ucm'] ** 2 + np.sqrt(ds['uc_ss'] ** 2).mean(dim='N')) * ds['uc'] / ((rho_s - rho_w) * g * d50)
-    elif option == 12:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ulm'] ** 2 + np.sqrt(ds['ul_ss'] ** 2).mean(dim='N')) * ds['ul'] / ((rho_s - rho_w) * g * d50)
-    elif option == 13:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc2'] ** 2) * ds['uc2'] / ((rho_s - rho_w) * g * d50)
-    elif option == 14:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul2'] ** 2) * ds['ul2'] / ((rho_s - rho_w) * g * d50)
-    elif option == 15:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc_ss'] ** 2) * ds['uc_ss'] / ((rho_s - rho_w) * g * d50)
-    elif option == 16:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul_ss'] ** 2) * ds['ul_ss'] / ((rho_s - rho_w) * g * d50)
-    elif option == 17:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc3'] ** 2) * ds['uc3'] / ((rho_s - rho_w) * g * d50)
-    elif option == 18:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul3'] ** 2) * ds['ul3'] / ((rho_s - rho_w) * g * d50)
-    elif option == 19:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc4'] ** 2) * ds['uc4'] / ((rho_s - rho_w) * g * d50)
-    elif option == 20:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul4'] ** 2) * ds['ul4'] / ((rho_s - rho_w) * g * d50)
-    elif option == 21:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc5'] ** 2) * ds['uc5'] / ((rho_s - rho_w) * g * d50)
-    elif option == 22:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul5'] ** 2) * ds['ul5'] / ((rho_s - rho_w) * g * d50)
-    elif option == 23:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc_lf'] ** 2) * ds['uc_lf'] / ((rho_s - rho_w) * g * d50)
-    elif option == 24:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul_lf'] ** 2) * ds['ul_lf'] / ((rho_s - rho_w) * g * d50)
-    elif option == 25:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc_hf'] ** 2) * ds['uc_hf'] / ((rho_s - rho_w) * g * d50)
-    elif option == 26:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul_hf'] ** 2) * ds['ul_hf'] / ((rho_s - rho_w) * g * d50)
-    elif option == 27:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc_lf'] + ds['uc_ss']) ** 2) * (ds['uc_lf'] + ds['uc_ss']) / ((rho_s - rho_w) * g * d50)
-    elif option == 28:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ul_lf'] + ds['ul_ss']) ** 2) * (ds['ul_lf'] + ds['ul_ss']) / ((rho_s - rho_w) * g * d50)
-    elif option == 29:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc2_ss'] ** 2) * ds['uc2_ss'] / ((rho_s - rho_w) * g * d50)
-    elif option == 30:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul2_ss'] ** 2) * ds['ul2_ss'] / ((rho_s - rho_w) * g * d50)
-    elif option == 31:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc2_ig'] ** 2) * ds['uc2_ig'] / ((rho_s - rho_w) * g * d50)
-    elif option == 32:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul2_ig'] ** 2) * ds['ul2_ig'] / ((rho_s - rho_w) * g * d50)
-    elif option == 33:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc2'] + ds['ucm']) ** 2) * (ds['uc2'] + ds['ucm']) / ((rho_s - rho_w) * g * d50)
-    elif option == 34:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ul2'] + ds['ulm']) ** 2) * (ds['ul2'] + ds['ulm']) / ((rho_s - rho_w) * g * d50)
-    elif option == 35: # not including any mean flow components
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc'] - ds['ucm']) ** 2) * (ds['uc'] - ds['ucm']) / ((rho_s - rho_w) * g * d50)
-    elif option == 36:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ul'] - ds['ulm']) ** 2) * (ds['ul'] - ds['ulm']) / ((rho_s - rho_w) * g * d50)
-    elif option == 37: # without the alongshore tide but including the total signal
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc'] ** 2) * ds['uc'] / ((rho_s - rho_w) * g * d50)
-    elif option == 38:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ul'] - ds['ulm']) ** 2) * (ds['ul'] - ds['ulm']) / ((rho_s - rho_w) * g * d50)
-    elif option == 39:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc2_ss'] + ds['uc2_ig']) ** 2) * (ds['uc2_ss'] + ds['uc2_ig']) / ((rho_s - rho_w) * g * d50)
-    elif option == 40:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ul2_ss'] + ds['ul2_ig']) ** 2) * (ds['ul2_ss'] + ds['ul2_ig']) / ((rho_s - rho_w) * g * d50)
-    elif option == 41: # excluding the return flow 
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc'] - ds['ucm']) ** 2) * (ds['uc'] - ds['ucm']) / ((rho_s - rho_w) * g * d50)
-    elif option == 42:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul'] ** 2) * ds['ul'] / ((rho_s - rho_w) * g * d50)
-    elif option == 43:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ucm'] + 0 * ds['uc']) ** 2) * (ds['ucm'] + 0 * ds['uc']) / ((rho_s - rho_w) * g * d50)
-    elif option == 44:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['ulm'] + 0 * ds['uc']) ** 2) * (ds['ulm'] + 0 * ds['uc']) / ((rho_s - rho_w) * g * d50)
-    elif option == 45: # only sea swell without cross-component
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc2_ss'] ** 2) * ds['uc2_ss'] / ((rho_s - rho_w) * g * d50)
-    elif option == 46:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul'] ** 2) * ds['ul'] / ((rho_s - rho_w) * g * d50)
-    elif option == 47:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc2_ss']+ds['ucm_nb2']) ** 2) * (ds['uc2_ss']+ds['ucm_nb2']) / ((rho_s - rho_w) * g * d50)
-    elif option == 48:
-        fcw = fw_dash
-        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul'] ** 2) * ds['ul'] / ((rho_s - rho_w) * g * d50)
-    elif option == 49: # only sea swell with along ripple component included in cross-shore
+    elif option == 49: # only sea swell (IG variance removed) with along ripple component included in cross-shore, cros-ripple mean flow removed
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc2_ss']+ds['ucm3']) ** 2) * (ds['uc2_ss']+ds['ucm3']) / ((rho_s - rho_w) * g * d50)
     elif option == 50:
@@ -283,6 +130,12 @@ def spearman_stats(a, b):
     dat = dat[~np.isnan(dat).any(axis=-1)]
     r = stats.spearmanr(dat)
     return r
+
+def pearson_stats(a, b):
+    dat = np.vstack([a, b]).T
+    dat = dat[~np.isnan(dat).any(axis=-1)]
+    r = stats.pearsonr(dat[:, 0], dat[:,1])
+    return r
     
 def density_scatter(x, y, range, ax=None, sort=True, bins=20, **kwargs):
     """
@@ -302,3 +155,24 @@ def density_scatter(x, y, range, ax=None, sort=True, bins=20, **kwargs):
     norm = Normalize(vmin=np.min(z), vmax=np.max(z))
     ax.scatter(x, y, c=z, norm=mpl.colors.LogNorm(), **kwargs)
     return ax
+
+def my_density_scatter(q, qs, ax, loc='bottom'):
+    ax.plot([-3, 3], [-3, 3], linewidth=0.5, color='k')
+
+    innan = ~np.logical_or(np.isnan(q), np.isnan(qs))
+    q = q[innan]
+    qs = qs[innan]
+    px = np.sign(qs)*np.log(np.abs(qs)+1)
+    py = np.sign(q)*np.log(np.abs(q)+1)
+    ran0 = [np.min([np.min(px), np.min(py)]), np.max([np.max(px), np.max(py)])]
+    ran = [ran0, ran0]
+    # ran = [[-2, 2], [-2, 2]]
+    density_scatter(px, py, ax=ax, range=ran, bins=40, **{'cmap':'copper', 's':3})
+    if loc=='bottom':
+        t = ax.text(0.05, 0.05, 'r={:.2f}'.format(spearman_stats(q, qs).correlation), transform=ax.transAxes, ha='left', va='bottom', fontsize=7.5)
+        t.set_bbox(dict(facecolor='white', alpha=0.3, edgecolor='None'))
+    else:
+        t = ax.text(0.05, 0.95, 'r={:.2f}'.format(spearman_stats(q, qs).correlation), transform=ax.transAxes, ha='left', va='top', fontsize=7.5)   
+        t.set_bbox(dict(facecolor='white', alpha=0.3, edgecolor='None'))     
+    print(spearman_stats(q, qs))
+    return

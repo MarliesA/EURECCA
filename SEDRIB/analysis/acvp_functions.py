@@ -49,11 +49,11 @@ def fix_time_coord_UBlab(ds):
     t2 = a*np.timedelta64(1, 'ns')+time[0]
     return ds.assign_coords({'time': t2})
 
-def load_adcv_corrected(file, thet1, thet2, zi=None, coarsen=False, ncoarsenz = 1, remove_T1=False):
+def load_acvp_corrected(file, thet1, thet2, zi=None, coarsen=False, ncoarsenz = 1, remove_T1=False):
     theta1 = thet1/180*np.pi
     theta2 = thet2/180*np.pi
 
-    dist = sc.io.loadmat(r'c:\Users\marliesvanderl\phd_archive\communication\vanNoemie\dist15.mat')
+    dist = sc.io.loadmat(r'c:\checkouts\python\EURECCA\SEDRIB\analysis\dist15.mat')
     dist = dist['dist'][:,0]
 
     ds = xr.open_dataset(file)
@@ -132,20 +132,7 @@ def load_adcv_corrected(file, thet1, thet2, zi=None, coarsen=False, ncoarsenz = 
 
 def load_urms_ublab(snrmin=2, thet1=-30, thet2=0, recompute=False):
 
-    if recompute is False:
-        try:
-            ublab_rms = xr.open_dataset(os.path.join(
-                r'\\tudelft.net\staff-umbrella\EURECCA\01AnalyseRemote\data\ublab',
-                'ublab_urms_{:.0f}deg_{:.0f}deg_5min.nc'.format(np.abs(thet1), np.abs(thet2)))
-            )
-            
-        except:
-            print('data not yet saved to file, recompute it')
-            ublab_rms = load_urms_ublab(snrmin=snrmin, thet1=thet1, thet2=thet2, recompute=True)
-
-    else:
-
-        folder = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20231101_ripples_frame\ublab-3c\dep1\raw_netcdf'
+        folder = r'c:\checkouts\dataCiaran\ACVP\raw_netcdf'
         filez = glob.glob(os.path.join(folder, '*.nc'))
 
         tlist = []
@@ -217,19 +204,7 @@ def load_urms_ublab(snrmin=2, thet1=-30, thet2=0, recompute=False):
 
 def load_skas_ublab(snrmin=2, thet1=-30, thet2=0, recompute=False):
 
-    if recompute is False:
-        try:
-            ublab_skas = xr.open_dataset(os.path.join(
-                r'\\tudelft.net\staff-umbrella\EURECCA\01AnalyseRemote\data\ublab',
-                'ublab_skas_{:.0f}deg_{:.0f}deg_5min.nc'.format(np.abs(thet1), np.abs(thet2)))
-            )
-        except:
-            print('data not yet saved to file, recompute it')
-            ublab_skas = load_skas_ublab(snrmin=snrmin, thet1=thet1, thet2=thet2, recompute=True)
-
-    else:
-
-        folder = r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20231101_ripples_frame\ublab-3c\dep1\raw_netcdf'
+        folder = r'c:\checkouts\dataCiaran\ACVP\raw_netcdf'
         filez = glob.glob(os.path.join(folder, '*.nc'))
 
         tlist = []
@@ -299,7 +274,7 @@ def load_skas_ublab(snrmin=2, thet1=-30, thet2=0, recompute=False):
     return ublab_skas
 
 def load_adv_urms_5min():
-    adv0 = xr.open_dataset(r'\\tudelft.net\staff-umbrella\EURECCA\fieldvisits\20231101_ripples_frame\vec008\qc4\vec008.nc')
+    adv0 = xr.open_dataset(r'c:\checkouts\dataCiaran\ADV\qc\vec008.nc')
     adv = xr_bursts_to_series(adv0)
 
     beachOri = 122
