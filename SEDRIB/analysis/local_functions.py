@@ -88,10 +88,16 @@ def shields_parameter_ribberink98(ds, d50, g=9.8, rho_s=2650, rho_w=1000, option
     """
     A = ds['Tmm10'] * ds['ud_ssm'] / 2 / np.pi
     fw_dash = np.exp(5.213 * (2.5 * d50 / A) ** 0.194 - 5.977)
-   if option == 7:
+    if option == 7:
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['uc'] ** 2) * ds['uc'] / ((rho_s - rho_w) * g * d50)
     elif option == 8:
+        fcw = fw_dash
+        theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul'] ** 2) * ds['ul'] / ((rho_s - rho_w) * g * d50)
+    elif option == 47:
+        fcw = fw_dash
+        theta_prime = 0.5 * rho_w * fcw * np.sqrt((ds['uc2_ss']+ds['ucm_nb2']) ** 2) * (ds['uc2_ss']+ds['ucm_nb2']) / ((rho_s - rho_w) * g * d50)
+    elif option == 48:
         fcw = fw_dash
         theta_prime = 0.5 * rho_w * fcw * np.sqrt(ds['ul'] ** 2) * ds['ul'] / ((rho_s - rho_w) * g * d50)
     elif option == 49: # only sea swell (IG variance removed) with along ripple component included in cross-shore, cros-ripple mean flow removed
@@ -156,23 +162,41 @@ def density_scatter(x, y, range, ax=None, sort=True, bins=20, **kwargs):
     ax.scatter(x, y, c=z, norm=mpl.colors.LogNorm(), **kwargs)
     return ax
 
-def my_density_scatter(q, qs, ax, loc='bottom'):
+def my_density_scatter(q, qs, ax, qr=None, loc='bottom'):
     ax.plot([-3, 3], [-3, 3], linewidth=0.5, color='k')
 
     innan = ~np.logical_or(np.isnan(q), np.isnan(qs))
     q = q[innan]
     qs = qs[innan]
+    if not qr is None:
+        qr = qr[innan]
     px = np.sign(qs)*np.log(np.abs(qs)+1)
     py = np.sign(q)*np.log(np.abs(q)+1)
     ran0 = [np.min([np.min(px), np.min(py)]), np.max([np.max(px), np.max(py)])]
     ran = [ran0, ran0]
+
+    if not qr is None:
+        innan = ~np.isnan(qr)
+        qrr = qr[innan]
+        qsr = qs[innan]
+
+    
     # ran = [[-2, 2], [-2, 2]]
     density_scatter(px, py, ax=ax, range=ran, bins=40, **{'cmap':'copper', 's':3})
     if loc=='bottom':
-        t = ax.text(0.05, 0.05, 'r={:.2f}'.format(spearman_stats(q, qs).correlation), transform=ax.transAxes, ha='left', va='bottom', fontsize=7.5)
+        t = ax.text(0.05, 0.25, 'r={:.2f}'.format(spearman_stats(q, qs).correlation), transform=ax.transAxes, ha='left', va='bottom', fontsize=7.5)
         t.set_bbox(dict(facecolor='white', alpha=0.3, edgecolor='None'))
+        if not qr is None:
+            tqr = ax.text(0.05, 0.05, 'r={:.2f}'.format(spearman_stats(qrr, qsr).correlation), transform=ax.transAxes, ha='left', va='bottom', fontsize=7.5, color='red')
+            tqr.set_bbox(dict(facecolor='white', alpha=0.3, edgecolor='None'))
     else:
-        t = ax.text(0.05, 0.95, 'r={:.2f}'.format(spearman_stats(q, qs).correlation), transform=ax.transAxes, ha='left', va='top', fontsize=7.5)   
-        t.set_bbox(dict(facecolor='white', alpha=0.3, edgecolor='None'))     
+        t = ax.text(0.05, 0.9, 'r={:.2f}'.format(spearman_stats(q, qs).correlation), transform=ax.transAxes, ha='left', va='top', fontsize=7.5)   
+        t.set_bbox(dict(facecolor='white', alpha=0.3, edgecolor='None'))  
+        if not qr is None:
+            tqr = ax.text(0.05, 0.7, 'r={:.2f}'.format(spearman_stats(qrr, qsr).correlation), transform=ax.transAxes, ha='left', va='top', fontsize=7.5, color='red')
+            tqr.set_bbox(dict(facecolor='white', alpha=0.3, edgecolor='None'))
+
     print(spearman_stats(q, qs))
+    if qr is not None:
+        print(spearman_stats(qrr, qsr))
     return
