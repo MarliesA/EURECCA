@@ -18,7 +18,7 @@ fileNames = glob.glob(os.path.join(config['experimentFolder'], instrument, 'qc15
 print(instrument)
 
 # prepare the save directory and place a copy of the script in this file
-ncOutDir = os.path.join(config['experimentFolder'], instrument, 'tailored15min_uc2_v2')
+ncOutDir = os.path.join(config['experimentFolder'], instrument, 'tailored260330')
 if not os.path.isdir(ncOutDir):
     os.mkdir(ncOutDir)
 
@@ -101,6 +101,17 @@ for file in fileNames:
 
         ds['fp'].attrs = {'units': 'Hz', 'long_name': 'peak frequency'}
         ds['Tp'].attrs = {'units': 's', 'long_name': 'Tp'}
+
+
+        kwargsIG = {'fmin': config['tailoredWaveSettings']['fmin'],
+                    'fmax': config['tailoredWaveSettings']['fmax'],
+                    'fmax_relative_fp': True}
+        ds['Hm0LF'], _, _, _, _, _ = (
+            ds.puv.compute_wave_params(var='vyp', **kwargsIG)
+        )
+
+        ds['Hm0LF'].attrs = {'units': 'm', 'long_name': 'Hm0LF'}
+
 
         ##########################################################################
         # wave direction and directional spread
